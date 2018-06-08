@@ -6,3 +6,7 @@ elm-stuff/
 repl-temp-*
 
 .hg/
+
+# Built files
+elm-detokenizer.js
+elm-tokenizer.js
