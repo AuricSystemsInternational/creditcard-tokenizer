@@ -2,11 +2,6 @@
 
 HTML iFrames for tokenizing and detokenizing credit card numbers using the AuricVault® tokenization service.
 
-# Prerequisites
-
-* Ensure you have elm-github-install on your system. You can download it from npm with the following:
-    `npm install elm-github-install -g`
-
 # Dependency
 
 * AuricSystemsInternational/creditcard-validator
