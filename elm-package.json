@@ -13,13 +13,7 @@
         "elm-lang/html": "2.0.0 <= v < 3.0.0",
         "elm-lang/http": "1.0.0 <= v < 2.0.0",
         "elm-lang/navigation": "2.1.0 <= v < 3.0.0",
-        "AuricSystemsInternational/creditcard-validator": "0.9.1 <= v <= 1.0.0"
-    },
-    "dependency-sources": {
-        "AuricSystemsInternational/creditcard-validator": {
-            "url": "git@github.com:AuricSystemsInternational/creditcard-validator.git",
-            "ref": "master"
-        }
+        "AuricSystemsInternational/creditcard-validator": "1.0.0 <= v <= 1.0.0"
     },
     "elm-version": "0.18.0 <= v < 0.19.0"
 }
