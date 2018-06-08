@@ -23,6 +23,3 @@
     },
     "elm-version": "0.18.0 <= v < 0.19.0"
 }
-
-
-iFrame to tokenize credit card account numbers for the AuricVault® service.
