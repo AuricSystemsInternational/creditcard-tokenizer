@@ -1,0 +1,29 @@
+.asi-tokenizerRoot input {
+    height: 25px;
+    padding: 3px;
+    margin-top: 3px;
+    margin-bottom: 3px;
+}
+
+.asi-tokenizerTimer{
+    float: right;
+    color: red;
+}
+
+/* applied to each field. ex: card number label + input */
+.asi-field {
+    height: 80px;
+}
+
+.asi-ccNumber input {
+    width: 240px;
+    float: left;
+}
+
+.asi-error{
+    color: red;
+}
+
+.asi-clear {
+    clear: both;
+}
