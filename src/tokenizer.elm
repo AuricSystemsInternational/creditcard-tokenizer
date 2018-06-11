@@ -16,6 +16,7 @@ import Navigation as Nav
 import Regex exposing (regex)
 import Time exposing (Time, second)
 import TokenizerApi as TA
+import Task
 
 
 type alias Model =
@@ -26,7 +27,7 @@ type alias Model =
     , validatedCardType : Maybe CCV.CardType
     , sessionID : Maybe String
     , currentTime : Time
-    , secondsRemaining : Int -- number of seconds left to tokenize once iframe initialized
+    , initialTime: Time
     , location : Nav.Location
     }
 
@@ -40,6 +41,8 @@ type alias Flags =
 type Msg
     = CCNumberInput String
     | Tick Time
+    | OnGetCurrentTime Time
+    | OnGetInitialTime Time
     | TokenizeResponse (Result Http.Error Auv.TokenizeResponsePayload)
     | ExternalMessage TA.IncomingMessage
     | LogErr String
@@ -51,11 +54,9 @@ secondsValidFor =
     -- 9 minutes
     90 * 60
 
-
 showCounterAt : Int
 showCounterAt =
     60
-
 
 msgInvalidCCNumber : String
 msgInvalidCCNumber =
@@ -77,8 +78,11 @@ init flags location =
         ( sessionID, cardTypes ) =
             parseFlags flags
     in
-    ( initModel sessionID cardTypes location, Cmd.none )
+    ( initModel sessionID cardTypes location, (cmdGetTime OnGetInitialTime))
 
+cmdGetTime: (Time -> msg) -> Cmd msg 
+cmdGetTime callback = 
+    Task.perform callback Time.now
 
 initModel : Maybe String -> List CCV.CardType -> Nav.Location -> Model
 initModel sessionID cardTypes location =
@@ -89,7 +93,7 @@ initModel sessionID cardTypes location =
     , validatedCardType = Nothing
     , sessionID = sessionID
     , currentTime = 0
-    , secondsRemaining = secondsValidFor
+    , initialTime = 0
     , location = location
     }
 
@@ -221,21 +225,30 @@ isNothing b =
         Just _ ->
             False
 
+cmdTimeOut: Cmd msg
+cmdTimeOut =                 
+    TA.sendMessageOut TA.Auv_Timeout
 
-onTick : Time -> Model -> ( Model, Cmd Msg )
-onTick newTime model =
+
+onCurrentTime: Time -> Model -> (Model, Cmd Msg)
+onCurrentTime newTime model = 
     let
-        newSecondsRemaining =
-            model.secondsRemaining - 1
+        timeup = 
+            (sessionActiveFor model) > secondsValidFor
 
         cmd =
-            if newSecondsRemaining == 0 then
-                TA.sendMessageOut TA.Auv_Timeout
+            if timeup then
+                cmdTimeOut
             else
                 Cmd.none
     in
-    ( { model | currentTime = newTime, secondsRemaining = newSecondsRemaining }, cmd )
+    ( { model | currentTime = newTime}, cmd )
 
+sessionActiveFor : Model -> Int 
+sessionActiveFor model = 
+    Time.inSeconds (model.currentTime - model.initialTime) 
+    |> round
+        
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -246,8 +259,12 @@ update msg model =
         ExternalMessage incomingMsg ->
             case incomingMsg of
                 TA.Tokenize ->
-                    if model.secondsRemaining <= 0 then
-                        ( model, TA.sendMessageOut TA.Auv_Timeout )
+                    let
+                        timeup = 
+                            (sessionActiveFor model) > secondsValidFor
+                    in
+                    if timeup then
+                        ( model, cmdTimeOut)
                     else if isCreditCardValid model then
                         onTokenize model
                     else
@@ -260,13 +277,28 @@ update msg model =
             onCCNumberInput model ccNum
 
         Tick newTime ->
-            onTick newTime model
+            (model, cmdGetTime OnGetCurrentTime)
 
         TokenizeResponse (Ok payload) ->
             ( model, onTokenizeResponseSuccess model payload )
 
         TokenizeResponse (Err err) ->
             ( model, onTokenizeFail (toString err) )
+        
+        OnGetInitialTime time ->
+            let
+                x = Debug.log "Initial Time: " time
+            in
+            ({ model | initialTime = time}, Cmd.none)
+
+        OnGetCurrentTime time ->
+            let
+                x = Debug.log "CurrentTime: " time
+            in
+            model 
+            |> onCurrentTime time
+
+
 
         NoOp ->
             ( model, Cmd.none )
@@ -389,10 +421,9 @@ mapAuvErrorCode raw =
 
 
 
-{- Takes into account current number entered, expiry date info entered
+{-| Takes into account current number entered, expiry date info entered
    ,priorDate info (if any) and filter by card (if any)
 -}
-
 
 isCreditCardValid : Model -> Bool
 isCreditCardValid model =
@@ -419,13 +450,17 @@ viewTimer model =
     let
         timerMsg =
             " seconds remain."
+        activeFor = sessionActiveFor model
+        remaining = secondsValidFor - activeFor 
+        
+        x = Debug.log "view Timer (active, remaining):" (activeFor, remaining)
     in
     div [ class "asi-tokenizerTimer" ]
         [ span []
-            [ if model.secondsRemaining <= 0 then
+            [ if remaining <= 0 then
                 text ("0" ++ timerMsg)
-              else if model.secondsRemaining <= showCounterAt then
-                text (toString model.secondsRemaining ++ timerMsg)
+              else if remaining <= showCounterAt then
+                text (toString remaining ++ timerMsg)
               else
                 text ""
             ]
