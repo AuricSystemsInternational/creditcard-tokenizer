@@ -286,15 +286,9 @@ update msg model =
             ( model, onTokenizeFail (toString err) )
         
         OnGetInitialTime time ->
-            let
-                x = Debug.log "Initial Time: " time
-            in
             ({ model | initialTime = time}, Cmd.none)
 
         OnGetCurrentTime time ->
-            let
-                x = Debug.log "CurrentTime: " time
-            in
             model 
             |> onCurrentTime time
 
@@ -451,9 +445,7 @@ viewTimer model =
         timerMsg =
             " seconds remain."
         activeFor = sessionActiveFor model
-        remaining = secondsValidFor - activeFor 
-        
-        x = Debug.log "view Timer (active, remaining):" (activeFor, remaining)
+        remaining = secondsValidFor - activeFor         
     in
     div [ class "asi-tokenizerTimer" ]
         [ span []
