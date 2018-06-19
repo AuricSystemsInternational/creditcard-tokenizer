@@ -5,10 +5,9 @@
 port module Tokenizer exposing (..)
 
 import Auv
-import Char exposing (isDigit)
 import CreditCardValidator as CCV
-import Html exposing (Html, div, span, text, input)
-import Html.Attributes exposing (class, maxlength, placeholder, type_)
+import Html exposing (Html, div, span, text, input, img)
+import Html.Attributes exposing (class, classList, maxlength, placeholder, type_, alt, src)
 import Html.Events exposing (onInput)
 import Http
 import Json.Encode as JE
@@ -16,6 +15,7 @@ import Navigation as Nav
 import Regex exposing (regex)
 import Time exposing (Time, second)
 import TokenizerApi as TA
+import Task
 
 
 type alias Model =
@@ -24,9 +24,10 @@ type alias Model =
     , ccNumberValid : Bool
     , allowedCardTypes : List CCV.CardType
     , validatedCardType : Maybe CCV.CardType
+    , matchedCardTypes : List CCV.CardType -- keeps track of all matched card type as card number is being entered
     , sessionID : Maybe String
     , currentTime : Time
-    , secondsRemaining : Int -- number of seconds left to tokenize once iframe initialized
+    , initialTime: Time
     , location : Nav.Location
     }
 
@@ -40,6 +41,8 @@ type alias Flags =
 type Msg
     = CCNumberInput String
     | Tick Time
+    | OnGetCurrentTime Time
+    | OnGetInitialTime Time
     | TokenizeResponse (Result Http.Error Auv.TokenizeResponsePayload)
     | ExternalMessage TA.IncomingMessage
     | LogErr String
@@ -49,13 +52,11 @@ type Msg
 secondsValidFor : Int
 secondsValidFor =
     -- 9 minutes
-    90 * 60
-
+    9 * 60
 
 showCounterAt : Int
 showCounterAt =
     60
-
 
 msgInvalidCCNumber : String
 msgInvalidCCNumber =
@@ -77,8 +78,11 @@ init flags location =
         ( sessionID, cardTypes ) =
             parseFlags flags
     in
-    ( initModel sessionID cardTypes location, Cmd.none )
+    ( initModel sessionID cardTypes location, (cmdGetTime OnGetInitialTime))
 
+cmdGetTime: (Time -> msg) -> Cmd msg 
+cmdGetTime callback = 
+    Task.perform callback Time.now
 
 initModel : Maybe String -> List CCV.CardType -> Nav.Location -> Model
 initModel sessionID cardTypes location =
@@ -87,9 +91,10 @@ initModel sessionID cardTypes location =
     , ccNumberValid = False
     , allowedCardTypes = cardTypes
     , validatedCardType = Nothing
+    , matchedCardTypes = []
     , sessionID = sessionID
     , currentTime = 0
-    , secondsRemaining = secondsValidFor
+    , initialTime = 0
     , location = location
     }
 
@@ -169,6 +174,15 @@ validatedCardType result =
     in
     cardType
 
+validatedCardTypes: CCV.ValidationResult -> List CCV.CardType
+validatedCardTypes result = 
+    result.card_types 
+    |> List.filterMap 
+        (\cardTypeInfo ->
+            case cardTypeInfo of 
+                Nothing -> Nothing   
+                Just a -> Just a.cardType
+        )
 
 onCCNumberInput : Model -> String -> ( Model, Cmd Msg )
 onCCNumberInput model ccNum =
@@ -181,33 +195,40 @@ onCCNumberInput model ccNum =
             filteredNumber
                 |> CCV.toCleanCCNumber
 
-        -- Just ensure CC number contains all digits
-        validCleanedNumber =
-            cleanedNumber
-                |> String.all Char.isDigit
-
         -- results of BIN and LUHN validation
         validationResult =
             CCV.validate ccNum model.allowedCardTypes
 
-        cardType =
-            validatedCardType validationResult
+        -- validation result used after at least 4 valid characters entered 
+        (cardType, allValidCardTypes, numValid, err) = 
+            if (String.length cleanedNumber) >= 4 then 
+                let
+                    cardType =
+                        validatedCardType validationResult
+                    
+                    allValidCardTypes = 
+                        validatedCardTypes validationResult
 
-        numValid =
-            validationResult.valid
+                    numValid =
+                        validationResult.valid
 
-        err =
-            if String.isEmpty filteredNumber then
-                Just msgInvalidCCNumber
-            else if validationResult.cardTypeValid == False then
-                Just msgInvalidCCType
-            else if numValid == False then
-                Just msgInvalidCCNumber
+                    err =
+                        if String.isEmpty filteredNumber then
+                            Just msgInvalidCCNumber
+                        else if validationResult.cardTypeValid == False then
+                            Just msgInvalidCCType
+                        else if numValid == False then
+                            Just msgInvalidCCNumber
+                        else
+                            Nothing
+                in 
+                    (cardType, allValidCardTypes, numValid, err)
             else
-                Nothing
+                (Nothing, [], False, Just msgInvalidCCNumber)            
 
         updatedModel =
-            { model | ccNumber = filteredNumber, ccNumberValid = numValid, ccNumberError = err, validatedCardType = cardType }
+            { model | ccNumber = filteredNumber, ccNumberValid = numValid, ccNumberError = err, validatedCardType = cardType
+                , matchedCardTypes = allValidCardTypes }
     in
     ( updatedModel, Cmd.none )
 
@@ -221,21 +242,30 @@ isNothing b =
         Just _ ->
             False
 
+cmdTimeOut: Cmd msg
+cmdTimeOut =                 
+    TA.sendMessageOut TA.Auv_Timeout
 
-onTick : Time -> Model -> ( Model, Cmd Msg )
-onTick newTime model =
+
+onCurrentTime: Time -> Model -> (Model, Cmd Msg)
+onCurrentTime newTime model = 
     let
-        newSecondsRemaining =
-            model.secondsRemaining - 1
+        timeup = 
+            (sessionActiveFor model) > secondsValidFor
 
         cmd =
-            if newSecondsRemaining == 0 then
-                TA.sendMessageOut TA.Auv_Timeout
+            if timeup then
+                cmdTimeOut
             else
                 Cmd.none
     in
-    ( { model | currentTime = newTime, secondsRemaining = newSecondsRemaining }, cmd )
+    ( { model | currentTime = newTime}, cmd )
 
+sessionActiveFor : Model -> Int 
+sessionActiveFor model = 
+    Time.inSeconds (model.currentTime - model.initialTime) 
+    |> round
+        
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -246,8 +276,12 @@ update msg model =
         ExternalMessage incomingMsg ->
             case incomingMsg of
                 TA.Tokenize ->
-                    if model.secondsRemaining <= 0 then
-                        ( model, TA.sendMessageOut TA.Auv_Timeout )
+                    let
+                        timeup = 
+                            (sessionActiveFor model) > secondsValidFor
+                    in
+                    if timeup then
+                        ( model, cmdTimeOut)
                     else if isCreditCardValid model then
                         onTokenize model
                     else
@@ -260,13 +294,22 @@ update msg model =
             onCCNumberInput model ccNum
 
         Tick newTime ->
-            onTick newTime model
+            (model, cmdGetTime OnGetCurrentTime)
 
         TokenizeResponse (Ok payload) ->
             ( model, onTokenizeResponseSuccess model payload )
 
         TokenizeResponse (Err err) ->
             ( model, onTokenizeFail (toString err) )
+        
+        OnGetInitialTime time ->
+            ({ model | initialTime = time}, Cmd.none)
+
+        OnGetCurrentTime time ->
+            model 
+            |> onCurrentTime time
+
+
 
         NoOp ->
             ( model, Cmd.none )
@@ -389,10 +432,9 @@ mapAuvErrorCode raw =
 
 
 
-{- Takes into account current number entered, expiry date info entered
+{-| Takes into account current number entered, expiry date info entered
    ,priorDate info (if any) and filter by card (if any)
 -}
-
 
 isCreditCardValid : Model -> Bool
 isCreditCardValid model =
@@ -419,13 +461,15 @@ viewTimer model =
     let
         timerMsg =
             " seconds remain."
+        activeFor = sessionActiveFor model
+        remaining = secondsValidFor - activeFor         
     in
     div [ class "asi-tokenizerTimer" ]
         [ span []
-            [ if model.secondsRemaining <= 0 then
+            [ if remaining <= 0 then
                 text ("0" ++ timerMsg)
-              else if model.secondsRemaining <= showCounterAt then
-                text (toString model.secondsRemaining ++ timerMsg)
+              else if remaining <= showCounterAt then
+                text (toString remaining ++ timerMsg)
               else
                 text ""
             ]
@@ -439,6 +483,7 @@ viewCCNumber model =
             []
             [ viewTimer model
             ]
+        , viewCCIcons model.allowedCardTypes model.matchedCardTypes
         , div []
             [ input
                 [ type_ "text"
@@ -460,6 +505,40 @@ viewCCNumber model =
         ]
 
 
+ccImage : String -> String -> Bool -> Html msg 
+ccImage fileName altText disabled = 
+    img 
+        [ alt altText, src ("images/creditcards/" ++ fileName)
+        , classList 
+            [ ("asi-ccImage", True)
+            , ("asi-ccImage-disabled", disabled)
+            ]
+        ]
+        []
+        
+
+{-| Displays icons for all matched cards
+-}
+viewCCIcons: List CCV.CardType -> List CCV.CardType -> Html msg
+viewCCIcons cardTypes matched =
+    div [class "asi-ccImages"]
+        (cardTypes 
+            |> List.map 
+                (\cardType ->
+                    let
+                        disable = not (List.member cardType matched)                        
+                    in
+                    case cardType of 
+                        CCV.AM -> ccImage "amex.png" "AMEX" disable
+                        CCV.DS -> ccImage "discover.png" "Discover" disable
+                        CCV.MC -> ccImage "mastercard.png" "MasterCard" disable
+                        CCV.VI -> ccImage "visa.png" "Visa" disable
+                        CCV.DC -> ccImage "diners.png" "Diners" disable
+                        CCV.UK -> ccImage "credit.png" "Unknown" disable                    
+                )
+        )
+
+        
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
