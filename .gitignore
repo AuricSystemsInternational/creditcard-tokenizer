@@ -10,3 +10,5 @@ repl-temp-*
 # Built files
 elm-detokenizer.js
 elm-tokenizer.js
+deploy/
+iframe-deploy-*.tar.gz

@@ -22,8 +22,8 @@ mkdir -p deploy/sample-code
 cp *.html deploy
 cp *.js deploy
 cp -R css/* deploy/css/
-cp -R js/* deploy/js/
-cp -R images/* deploy/images/
+# cp -R js/* deploy/js/
+cp -R images/ deploy/images/
 cp -R sample-code/* deploy/sample-code
 
 now=`date +"%Y-%m-%d"`

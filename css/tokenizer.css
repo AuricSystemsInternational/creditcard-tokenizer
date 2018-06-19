@@ -27,3 +27,15 @@
 .asi-clear {
     clear: both;
 }
+
+.asi-ccImages {
+    white-space: nowrap;
+}
+
+.asi-ccImage {
+    width: 55px;
+}
+
+.asi-ccImage-disabled {
+    opacity: 0.3;
+}
