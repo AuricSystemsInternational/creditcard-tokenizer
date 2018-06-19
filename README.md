@@ -15,6 +15,11 @@ HTML iFrames for tokenizing and detokenizing credit card numbers using the Auric
 The `build.sh` script generates two Javascript files, one for tokenizer and one for detokenizer.
 The script has parameters for compiling with debugging and optionally minifying the Javascript output (requires the minify tool be installed).
 
+# Images
+
+* This project uses icons from Shopify's free Credit Card Icon Set https://www.shopify.com/blog/6335014-32-free-credit-card-icons 
+
+* The credit card images are assumed to be located in "images/creditcards" directory of the web site/application 
 
 # Sample Code
 
