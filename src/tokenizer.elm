@@ -196,33 +196,36 @@ onCCNumberInput model ccNum =
             filteredNumber
                 |> CCV.toCleanCCNumber
 
-        -- Just ensure CC number contains all digits
-        validCleanedNumber =
-            cleanedNumber
-                |> String.all Char.isDigit
-
         -- results of BIN and LUHN validation
         validationResult =
             CCV.validate ccNum model.allowedCardTypes
 
-        cardType =
-            validatedCardType validationResult
-        
-        allValidCardTypes = 
-            validatedCardTypes validationResult
+        -- validation result used after at least 4 valid characters entered 
+        (cardType, allValidCardTypes, numValid, err) = 
+            if (String.length cleanedNumber) >= 4 then 
+                let
+                    cardType =
+                        validatedCardType validationResult
+                    
+                    allValidCardTypes = 
+                        validatedCardTypes validationResult
 
-        numValid =
-            validationResult.valid
+                    numValid =
+                        validationResult.valid
 
-        err =
-            if String.isEmpty filteredNumber then
-                Just msgInvalidCCNumber
-            else if validationResult.cardTypeValid == False then
-                Just msgInvalidCCType
-            else if numValid == False then
-                Just msgInvalidCCNumber
+                    err =
+                        if String.isEmpty filteredNumber then
+                            Just msgInvalidCCNumber
+                        else if validationResult.cardTypeValid == False then
+                            Just msgInvalidCCType
+                        else if numValid == False then
+                            Just msgInvalidCCNumber
+                        else
+                            Nothing
+                in 
+                    (cardType, allValidCardTypes, numValid, err)
             else
-                Nothing
+                (Nothing, [], False, Just msgInvalidCCNumber)            
 
         updatedModel =
             { model | ccNumber = filteredNumber, ccNumberValid = numValid, ccNumberError = err, validatedCardType = cardType
