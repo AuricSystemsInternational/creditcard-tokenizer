@@ -91,9 +91,10 @@
                  var mtid = $("#credentials input[name=mtid]").val();
                  var segment = $("#credentials input[name=segment]").val();
                  var secret = $("#credentials input[name=secret]").val();
+                 var retention = $("#credentials input[name=retention]").val();
 
                  /* Get us a session. */
-                 ajaxGetSession(configuration, mtid, segment, secret);
+                 ajaxGetSession(configuration, mtid, segment, retention, secret);
 
                  /* ajaxTokenize is async. We will come back here and exit.
                     That's why we needed to do event.preventDefault() above.
@@ -122,7 +123,7 @@
              sendMessage(msg);
              return requestId;
          }
-         function ajaxGetSession(configuration, mtid, segment, secret) {
+         function ajaxGetSession(configuration, mtid, segment, retention, secret) {
              $("#auv_message").text("");
              var params = {
                  "id": generateAjaxId(),
@@ -131,7 +132,7 @@
                      "utcTimestamp": utcTimestamp(),
                      "configurationId": configuration,
                      "mtid": mtid,
-                     "retention": "big-year",
+                     "retention": retention,
                      "segment": segment
                      }]
                  };
@@ -213,6 +214,7 @@
             Configuration: <input type="text" name="configuration" value=""><br />
             MTID: <input type="text" name="mtid" value=""><br />
             Segment: <input type="text" name="segment" value=""><br />
+            Retention: <input type="text" name="retention" value="big-year"><br />
             Secret: <input type="password" name="secret" value=""><br />
             <input type="submit" id="credentials" value="Get Session"><br />
 
