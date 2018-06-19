@@ -5,7 +5,6 @@
 port module Tokenizer exposing (..)
 
 import Auv
-import Char exposing (isDigit)
 import CreditCardValidator as CCV
 import Html exposing (Html, div, span, text, input, img)
 import Html.Attributes exposing (class, classList, maxlength, placeholder, type_, alt, src)
