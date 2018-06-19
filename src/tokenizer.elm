@@ -53,7 +53,7 @@ type Msg
 secondsValidFor : Int
 secondsValidFor =
     -- 9 minutes
-    90 * 60
+    9 * 60
 
 showCounterAt : Int
 showCounterAt =
