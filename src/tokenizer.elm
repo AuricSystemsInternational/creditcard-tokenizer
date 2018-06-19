@@ -7,8 +7,8 @@ port module Tokenizer exposing (..)
 import Auv
 import Char exposing (isDigit)
 import CreditCardValidator as CCV
-import Html exposing (Html, div, span, text, input)
-import Html.Attributes exposing (class, maxlength, placeholder, type_)
+import Html exposing (Html, div, span, text, input, img)
+import Html.Attributes exposing (class, classList, maxlength, placeholder, type_, alt, src)
 import Html.Events exposing (onInput)
 import Http
 import Json.Encode as JE
@@ -25,6 +25,7 @@ type alias Model =
     , ccNumberValid : Bool
     , allowedCardTypes : List CCV.CardType
     , validatedCardType : Maybe CCV.CardType
+    , matchedCardTypes : List CCV.CardType -- keeps track of all matched card type as card number is being entered
     , sessionID : Maybe String
     , currentTime : Time
     , initialTime: Time
@@ -91,6 +92,7 @@ initModel sessionID cardTypes location =
     , ccNumberValid = False
     , allowedCardTypes = cardTypes
     , validatedCardType = Nothing
+    , matchedCardTypes = []
     , sessionID = sessionID
     , currentTime = 0
     , initialTime = 0
@@ -173,6 +175,15 @@ validatedCardType result =
     in
     cardType
 
+validatedCardTypes: CCV.ValidationResult -> List CCV.CardType
+validatedCardTypes result = 
+    result.card_types 
+    |> List.filterMap 
+        (\cardTypeInfo ->
+            case cardTypeInfo of 
+                Nothing -> Nothing   
+                Just a -> Just a.cardType
+        )
 
 onCCNumberInput : Model -> String -> ( Model, Cmd Msg )
 onCCNumberInput model ccNum =
@@ -196,6 +207,9 @@ onCCNumberInput model ccNum =
 
         cardType =
             validatedCardType validationResult
+        
+        allValidCardTypes = 
+            validatedCardTypes validationResult
 
         numValid =
             validationResult.valid
@@ -211,7 +225,8 @@ onCCNumberInput model ccNum =
                 Nothing
 
         updatedModel =
-            { model | ccNumber = filteredNumber, ccNumberValid = numValid, ccNumberError = err, validatedCardType = cardType }
+            { model | ccNumber = filteredNumber, ccNumberValid = numValid, ccNumberError = err, validatedCardType = cardType
+                , matchedCardTypes = allValidCardTypes }
     in
     ( updatedModel, Cmd.none )
 
@@ -466,6 +481,7 @@ viewCCNumber model =
             []
             [ viewTimer model
             ]
+        , viewCCIcons model.allowedCardTypes model.matchedCardTypes
         , div []
             [ input
                 [ type_ "text"
@@ -487,6 +503,40 @@ viewCCNumber model =
         ]
 
 
+ccImage : String -> String -> Bool -> Html msg 
+ccImage fileName altText disabled = 
+    img 
+        [ alt altText, src ("images/creditcards/" ++ fileName)
+        , classList 
+            [ ("asi-ccImage", True)
+            , ("asi-ccImage-disabled", disabled)
+            ]
+        ]
+        []
+        
+
+{-| Displays icons for all matched cards
+-}
+viewCCIcons: List CCV.CardType -> List CCV.CardType -> Html msg
+viewCCIcons cardTypes matched =
+    div [class "asi-ccImages"]
+        (cardTypes 
+            |> List.map 
+                (\cardType ->
+                    let
+                        disable = not (List.member cardType matched)                        
+                    in
+                    case cardType of 
+                        CCV.AM -> ccImage "amex.png" "AMEX" disable
+                        CCV.DS -> ccImage "discover.png" "Discover" disable
+                        CCV.MC -> ccImage "mastercard.png" "MasterCard" disable
+                        CCV.VI -> ccImage "visa.png" "Visa" disable
+                        CCV.DC -> ccImage "diners.png" "Diners" disable
+                        CCV.UK -> ccImage "credit.png" "Unknown" disable                    
+                )
+        )
+
+        
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
