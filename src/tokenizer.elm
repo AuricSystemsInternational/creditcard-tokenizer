@@ -65,7 +65,7 @@ msgInvalidCCNumber =
 
 msgInvalidCCType : String
 msgInvalidCCType =
-    "Invalid card type."
+    "We do not accept this card brand."
 
 
 init : Flags -> Nav.Location -> ( Model, Cmd Msg )
