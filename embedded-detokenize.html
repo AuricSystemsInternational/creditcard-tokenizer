@@ -1,6 +1,6 @@
 <html>
     <head>
-            <script type="text/javascript" src="elm-detokenizer.js"></script>                        
+            <script type="text/javascript" src="elm-detokenizer.js"></script>
     </head>
 <body>
         <div id="elm-container"></div>
@@ -24,12 +24,12 @@
         var appParams = {
             sessionID: getParameterByName("sessionID") || "",
             auvToken: getParameterByName("auvToken"),
-            //Change target to "test" or "prod". Empty string is considered prod 
+            //Change target to "test" or "prod". Empty string is considered prod
             target: "dev"
         };
-        var elmApp = Elm.DeTokenizer.embed(elmDiv, appParams);
+        var elmApp = Elm.Detokenizer.embed(elmDiv, appParams);
 
-        //support for IE8 
+        //support for IE8
         function bindEvent(element, eventName, eventHandler){
             if (element.addEventListener){
                 element.addEventListener(eventName, eventHandler, false);
@@ -54,18 +54,18 @@
                 //send message along to the parent
                 sendMessage(msg);
 //                console.log("AUV message sent to parent.")
-            } 
-            
+            }
+
             else if (msg.tag == "log_error") {
-                // just to log error coming out of elm tokenizer 
+                // just to log error coming out of elm tokenizer
                 console.error(msg.data);
             }
-        
+
         });
 
         var sendMessage = function(msg){
             window.parent.postMessage(msg, "*");
         }
     </script>
-            
+
 </html>

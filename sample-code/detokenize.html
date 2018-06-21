@@ -3,7 +3,7 @@
     <meta charset="UTF-8">
 
     <!--
-        Copyright (c) 2014-2017 Auric Systems International. All rights reserved.
+        Copyright (c) 2014-2018 Auric Systems International. All rights reserved.
         License: 3-Clause BSD License.
      -->
 
@@ -32,6 +32,7 @@
          * Copyright (c) 2009 Massimo Lombardo.
          * Dual licensed under the MIT and the GNU GPL licenses.
          * https://forum.jquery.com/topic/jquery-what-do-you-recommend-to-generate-uuid-with-jquery
+          * NOTE from ASI: Math.random is sufficiently random for this tracking purpose.
          */
         function uuid4() {
             var uuid = (function () {
@@ -115,6 +116,7 @@
                     "segment": segment
                     }]
                 };
+            var vault_trace_uid = uuid4();
             var json_data = JSON.stringify(params)
             var hex_secret = toHex(secret)
             var hash = new jsSHA("SHA-512", "TEXT")
@@ -127,7 +129,7 @@
                 url: vault_url,
                 beforeSend: function(xhr) {
                     xhr.setRequestHeader("X-VAULT-HMAC", hmac);
-                    xhr.setRequestHeader("X-VAULT-TRACE-UID", uuid4());
+                    xhr.setRequestHeader("X-VAULT-TRACE-UID", vault_trace_uid);
                     },
                 crossDomain: true,
                 dataType: 'json',
@@ -151,6 +153,7 @@
                         $('#embedded').attr(
                             'src',
                             '../embedded-detokenize.html?sessionID=' + sessionId +
+                            '&vault_trace_uid=' + vault_trace_uid +
                             '&auvToken=' + auvToken);
                     };
                 },
