@@ -13,7 +13,7 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
     <script src="./js/sha512.js"></script>
     <script src="./js/uuid4.js"></script>
-    <script src="./js/app.js"></script>
+    <script src="./js/app-tokenize.js"></script>
     </head>
     <body>
         <noscript>JavaScript Required</noscript>
@@ -50,6 +50,7 @@
                         <label class="label" for="secret">Secret</label>
                         <input class="input" type="password" name="secret" id="secret" value="" placeholder="Secret (for HMAC)" required>
                     </div>
+                    <hr>
                     <div class="field">
                         <label class="label" for="cardTypes">Card types to accept (Embedded iFrame URL parameter)</label>
                         <input class="input" type="text" id="cardTypes" name="cardTypes" value="AM,DS,MC,VI" placeholder="AM,DS,MC,VI">

@@ -6,6 +6,7 @@ elm-stuff/
 repl-temp-*
 
 .hg/
+bu/
 
 # Built files
 elm-detokenizer.js
