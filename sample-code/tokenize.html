@@ -1,14 +1,18 @@
-<html>
-    <head>
-        <meta charset="UTF-8">
+<!DOCTYPE html>
+<html lang="en">
     <!--
         Copyright (c) 2014-2018 Auric Systems International. All rights reserved.
         License: 3-Clause BSD License
      -->
-
-     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
-     <script src="./js/sha512.js"></script>
-     <script>
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SAMPLE: AuricVault® Embedded iFrame</title>
+    <link rel="stylesheet" href="./css/bulma.min.css">
+    <link rel="stylesheet" href="./css/app.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+    <script src="./js/sha512.js"></script>
+    <script>
          /* Utility Functions
             In production, all this JavaScript would be served by externally
             loaded scripts. Shown here inline to simplify the sample code.
@@ -83,16 +87,16 @@
 
          $(document).ready(function() {
              /* Bind to the button. */
-             $("#credentials").submit(function(event) {
+             $("#credentials-form").submit(function(event) {
                  /* need to call prevent-default because the Ajax call is asynchronous */
                  event.preventDefault();
 
                  // Gather the data.
-                 var configuration = $("#credentials input[name=configuration]").val();
-                 var mtid = $("#credentials input[name=mtid]").val();
-                 var segment = $("#credentials input[name=segment]").val();
-                 var secret = $("#credentials input[name=secret]").val();
-                 var retention = $("#credentials input[name=retention]").val();
+                 var configuration = $("#credentials-form input[name=configuration]").val();
+                 var mtid = $("#credentials-form input[name=mtid]").val();
+                 var segment = $("#credentials-form input[name=segment]").val();
+                 var secret = $("#credentials-form input[name=secret]").val();
+                 var retention = $("#credentials-form input[name=retention]").val();
 
                  /* Get us a session. */
                  ajaxGetSession(configuration, mtid, segment, retention, secret);
@@ -125,7 +129,6 @@
              return requestId;
          }
          function ajaxGetSession(configuration, mtid, segment, retention, secret) {
-             $("#auv_message").text("");
              var params = {
                  "id": generateAjaxId(),
                  "method": "get_session",
@@ -180,6 +183,8 @@
                              '../embedded-tokenize.html?sessionID=' + sessionId +
                              '&vault_trace_uid=' + vault_trace_uid +
                              '&cardTypes=' + cardtypes);
+                        $("#credentials-section").addClass("hidden");
+                        $("#output").removeClass("hidden");
                      };
                  },
                  error: function(jqXHR, textStatus, errorThrown) {
@@ -202,115 +207,162 @@
              sendMessage(msg);
 
          }
-     </script>
+        //send message to iframe
+        var sendMessage = function(msg) {
+            var embeddedTokenizer = document.getElementById("embedded");
+            embeddedTokenizer.contentWindow.postMessage(msg, "*");
+        }
 
+        function bindEvent(element, eventName, eventHandler) {
+            if (element.addEventListener){
+                element.addEventListener(eventName, eventHandler, false);
+            } else if (element.attachEvent) {
+                element.attachEvent('on' + eventName, eventHandler);
+            }
+        }
 
-     <style>
-        #embedded { width: 350px; height: 170px;}
-     </style>
+        bindEvent(window, "message", function(e){
+            //console.log(e);
+            var tag = e.data.tag || "";
+            var data = e.data.data;
+
+            if (tag == "auv_ok"){
+                auv_ok(data.token, data.cardType)
+            } else if (tag == "auv_error"){
+                auv_error(data.code, data.message);
+            } else if (tag == "auv_timeout"){
+                auv_timeout();
+            } else if (tag == "cc_valid"){
+                creditcard_valid(data.requestId, data.isValid);
+            }
+
+        })
+
+        function show_auv_message(msg){
+            alert(msg);
+        }
+
+        //API functions
+        function auv_ok(token, card_type){
+            $('#embedded').attr('src', '');
+            var msg = "Tokenization succeeded.\nToken: " + token + "\nCard type: " + card_type;
+            show_auv_message(msg);
+            $("#output").addClass("hidden");
+            $("#credentials-section").removeClass("hidden");
+        }
+
+        function auv_timeout(){
+            $('#embedded').attr('src', '');
+            show_auv_message("AUV request timed out.");
+            $("#output").addClass("hidden");
+            $("#credentials-section").removeClass("hidden");
+        }
+
+        function auv_error(error_code, error_message){
+            $('#embedded').attr('src', '');
+            var msg = "AUV request failed. Code: " + error_code + ", error: " + error_message;
+            show_auv_message(msg);
+            $("#output").addClass("hidden");
+            $("#credentials-section").removeClass("hidden");
+        }
+        function creditcard_valid(requestId, isValid){
+            //message from embedded iframe indicating whether
+            //a credit card is valid or not. This message is generated in response
+            //to a isCreditCardValid request identified by the request id
+            //Further action can be taken here based on that response
+
+            //now tokenize of valid and requestId matches
+            if (isValid && requestId === ccRequestId) {
+                console.log("Credit card data is valid. Tokenizing...")
+                tokenize();
+            }
+            else {
+                var msg = "Credit card data is not valid.";
+                show_auv_message(msg);
+            }
+        }
+        </script>
     </head>
     <body>
         <noscript>JavaScript Required</noscript>
-        <h1>Browser-Only Demonstration</h1>
-        <div>In production the Get Session call occurs on the server, never in the browser.</div>
-        <hr />
-        <form id='credentials'>
-            Configuration: <input type="text" name="configuration" value=""><br />
-            MTID: <input type="text" name="mtid" value=""><br />
-            Segment: <input type="text" name="segment" value=""><br />
-            Retention: <input type="text" name="retention" value="big-year"><br />
-            Secret: <input type="password" name="secret" value=""><br />
-            <input type="submit" id="credentials" value="Get Session"><br />
 
-            <hr />
-            <div>URL parameters when loading the embedded iFrame.</div>
-            <div>Would not appear on parent page.</div>
-            <div>
-                Limit to CardTypes: <input type="text" id="cardTypes" name="cardTypes" value="AM,DS,MC,VI"></input>
-            </div>
-            <br />
-            <hr />
-            <div>Tokenize button is displayed on parent page.<br />Calls the embedded iFrame.</div>
-            <input type="button" id="tokenize" value="Tokenize"/>
-        </form>
-
-        <!-- <iframe id="embedded" src="embedded-tokenize.html?"></iframe> -->
-        <iframe id="embedded" src=""></iframe>
-
-        <hr />
-        <div id="auv_message"></div>
-        <script type="text/javascript">
-
-                var embeddedTokenizer = document.getElementById("embedded");
-
-                //send message to iframe
-                var sendMessage = function(msg) {
-                    embeddedTokenizer.contentWindow.postMessage(msg, "*");
-                }
-
-                function bindEvent(element, eventName, eventHandler) {
-                    if (element.addEventListener){
-                        element.addEventListener(eventName, eventHandler, false);
-                    } else if (element.attachEvent) {
-                        element.attachEvent('on' + eventName, eventHandler);
-                    }
-                }
-
-                bindEvent(window, "message", function(e){
-                    //console.log(e);
-                    var tag = e.data.tag || "";
-                    var data = e.data.data;
-
-                    if (tag == "auv_ok"){
-                        auv_ok(data.token, data.cardType)
-                    } else if (tag == "auv_error"){
-                        auv_error(data.code, data.message);
-                    } else if (tag == "auv_timeout"){
-                        auv_timeout();
-                    } else if (tag == "cc_valid"){
-                        creditcard_valid(data.requestId, data.isValid);
-                    }
-
-                })
-
-                function show_auv_message(msg){
-                    $("#auv_message").text(msg);
-                }
-
-                //API functions
-                function auv_ok(token, card_type){
-                    $('#embedded').attr('src', '');
-                    var msg = "Tokenization succeeded: token: " + token + ", card type: " + card_type;
-                    show_auv_message(msg);
-                }
-
-                function auv_timeout(){
-                    $('#embedded').attr('src', '');
-                    show_auv_message("AUV request timed out.");
-
-                }
-                function auv_error(error_code, error_message){
-                    $('#embedded').attr('src', '');
-                    var msg = "AUV request failed. Code: " + error_code + ", error: " + error_message;
-                    show_auv_message(msg);
-                }
-                function creditcard_valid(requestId, isValid){
-                    //message from embedded iframe indicating whether
-                    //a credit card is valid or not. This message is generated in response
-                    //to a isCreditCardValid request identified by the request id
-                    //Further action can be taken here based on that response
-
-                    //now tokenize of valid and requestId matches
-                    if (isValid && requestId === ccRequestId) {
-                        console.log("Credit card data is valid. Tokenizing...")
-                        tokenize();
-                    }
-                    else {
-                        var msg = "Credit card data is not valid.";
-                        show_auv_message(msg);
-                    }
-                }
-            </script>
-
+        <div class="container">
+            <section class="section">
+                <h1 class="title">AuricVault<sup>®</sup> Demo</h1>
+                <h2 class="subtitle">Browser-Side Tokenization</h2>
+                <div class="notification">
+                    In production the Get Session API call (get_session) occurs on the server.<br>
+                    <strong>Never</strong> call get_session from the browser in production.
+                </div>
+            </section>
+            <section id="credentials-section" class="section">
+                <h2 class="subtitle">AuricVault<sup>®</sup> Service Credentials</h2>
+                <form class="form" id="credentials-form">
+                    <div class="field">
+                        <label class="label" for="configuration">Configuration</label>
+                        <input class="input" type="text" name="configuration" id="configuration" value="" placeholder="Configuration" required>
+                    </div>
+                    <div class="field">
+                        <label class="label" for="mtid">MTID</label>
+                        <input class="input" type="text" name="mtid" id="mtid" value="" placeholder="MTID" required>
+                    </div>
+                    <div class="field">
+                        <label class="label" for="segment">Segment</label>
+                        <input class="input" type="text" name="segment" id="segment" value="" placeholder="Segment" required>
+                    </div>
+                    <div class="field">
+                        <label class="label" for="retention">Retention</label>
+                        <input class="input" type="text" name="retention" id="retention" value="forever" placeholder="Retention" required>
+                    </div>
+                    <div class="field">
+                        <label class="label" for="secret">Secret</label>
+                        <input class="input" type="password" name="secret" id="secret" value="" placeholder="Secret (for HMAC)" required>
+                    </div>
+                    <div class="field">
+                        <label class="label" for="cardTypes">Card types to accept (Embedded iFrame URL parameter)</label>
+                        <input class="input" type="text" id="cardTypes" name="cardTypes" value="AM,DS,MC,VI" placeholder="AM,DS,MC,VI">
+                    </div>
+                    <div class="control">
+                        <input class="button is-primary" type="submit" id="credentials" value="Display iFrame"><br />
+                    </div>
+                </form>
+            </section>
+            <section id="output" class="hidden">
+                <p class="notification">Parent Page</p>
+                <hr>
+                <!-- <iframe id="embedded" src="embedded-tokenize.html?"></iframe> -->
+                <iframe id="embedded" src=""></iframe>
+                <hr>
+                <div class="notification">
+                    The tokenize button is displayed on the parent page.<br>
+                    It calls the embedded iFrame.
+                </div>
+                <form>
+                    <input class="button is-primary" type="button" id="tokenize" value="Tokenize"/>
+                </form>
+            </section>
+            <footer class="footer">
+                <div class="container has-text-centered">
+                    <p>
+                        <a href="https://www.TokenizeWhatMatters.com/">Tokenize What Matters<sup>&reg;</sup></a>
+                    </p>
+                    <p>
+                        <strong xmlns:dct="http://purl.org/dc/terms/" href="http://purl.org/dc/dcmitype/Text" property="dct:title" rel="dct:type">
+                            Sample Embedded Tokenization iFrame
+                        </strong>
+                        by
+                        <a xmlns:cc="http://creativecommons.org/ns#" href="http://jgthms.com" property="cc:attributionName" rel="cc:attributionURL">
+                            Auric Systems International</a>.
+                    </p>
+                    <p>
+                        The source code is licensed <a href="http://opensource.org/licenses//BSD-3-Clause">The 3-Clause BSD License</a>.
+                    </p>
+                    <p>
+                        Contact: <a href="mailto://support@AuricSystems.com">support@AuricSystems.com</a>
+                    </p>
+                </div>
+              </div>
+            </footer>
+        </div>
     </body>
 </html>
