@@ -1,5 +1,7 @@
 /*
-* Utility functions for the sample AuricVault® service browser-side tokenization demo.
+* Utility functions for the sample AuricVault® service
+* browser-side tokenization demo.
+*
 * Copyright © 2017-2018 Auric Systems International. All rights reserved.
 * Licensed under The 3-Clause BSD License.
 */
@@ -7,24 +9,24 @@
 
 "use strict";
 
-var vault_url = 'https://vault02-sb.auricsystems.com/vault/v2/';
+var vault_url = "https://vault02-sb.auricsystems.com/vault/v2/";
 
 // track the creditcardvalidation request id
 var ccRequestId = "";
 
 
 function toHex(str) {
-    var hex = '';
-    for(var i=0;i<str.length;i++) {
-        hex += ''+str.charCodeAt(i).toString(16);
+    var hex = "";
+    for (var i=0;i<str.length;i++) {
+        hex += ""+str.charCodeAt(i).toString(16);
     }
     return hex;
 }
 
- /* String Substitution */
+/* String Substitution */
 String.prototype.format = function() {
     var formatted = this;
-    for( var arg in arguments ) {
+    for ( var arg in arguments ) {
         formatted = formatted.replace("{" + arg + "}", arguments[arg]);
     }
     return formatted;
@@ -73,7 +75,6 @@ $(document).ready(function() {
     });
 });
 
-
 function validateCreditCard(){
 
     //A sample request ID
@@ -82,10 +83,11 @@ function validateCreditCard(){
         tag: "isCreditCardValid",
         data: requestId
     };
-//             console.log(msg);
+    // console.log(msg);
     sendMessage(msg);
     return requestId;
 }
+
 function ajaxGetSession(configuration, mtid, segment, retention, secret) {
     var params = {
         "id": generateAjaxId(),
@@ -107,46 +109,46 @@ function ajaxGetSession(configuration, mtid, segment, retention, secret) {
     var hmac = hash.getHMAC("HEX")
 
     $.ajax({
-        type: 'POST',
+        type: "POST",
         url: vault_url,
         beforeSend: function(xhr) {
             xhr.setRequestHeader("X-VAULT-HMAC", hmac);
             xhr.setRequestHeader("X-VAULT-TRACE-UID", vault_trace_uid);
             },
         crossDomain: true,
-        dataType: 'json',
+        dataType: "json",
         timeout: 1000 * 5,
         data: json_data,
         success: function(data, textStatus, jqXHR) {
             var json = JSON.stringify(data);
-            var las = data['result']['lastActionSucceeded'];
+            var las = data["result"]["lastActionSucceeded"];
             if(0 == las) {
-               console.log('Problem..');
+               console.log("Problem..");
                // alert("We've experienced a processing error. Please try again.");
                 /* This would be a good place to log an error
                    using whatever error tracking system you have.
 
                    Never show the following alert in production.
                  */
-                alert(data['error']);
+                alert(data["error"]);
             } else {
                 /* Load the embedded iFrame */
-                console.log('SUCCESS!!');
+                console.log("SUCCESS!!");
 
-                var sessionId = data['result']['sessionId'];
+                var sessionId = data["result"]["sessionId"];
                 var cardtypes = $("#cardTypes").val();
 
-               $('#embedded').attr(
-                    'src',
-                    '../embedded-tokenize.html?sessionID=' + sessionId +
-                    '&vault_trace_uid=' + vault_trace_uid +
-                    '&cardTypes=' + cardtypes);
+               $("#embedded").attr(
+                    "src",
+                    "../embedded-tokenize.html?sessionID=" + sessionId +
+                    "&vault_trace_uid=" + vault_trace_uid +
+                    "&cardTypes=" + cardtypes);
                $("#credentials-section").addClass("hidden");
                $("#output").removeClass("hidden");
             };
         },
         error: function(jqXHR, textStatus, errorThrown) {
-            console.log('ISSUES!!');
+            console.log("ISSUES!!");
             // Another good place to log an error.
             // alert("We've experienced a processing error. Please try again.");
             // Never show alert in production.
@@ -165,7 +167,8 @@ function tokenize(){
     sendMessage(msg);
 
 }
-//send message to iframe
+
+//send a message to the iFrame
 var sendMessage = function(msg) {
    var embeddedTokenizer = document.getElementById("embedded");
    embeddedTokenizer.contentWindow.postMessage(msg, "*");
@@ -175,7 +178,7 @@ function bindEvent(element, eventName, eventHandler) {
    if (element.addEventListener){
        element.addEventListener(eventName, eventHandler, false);
    } else if (element.attachEvent) {
-       element.attachEvent('on' + eventName, eventHandler);
+       element.attachEvent("on" + eventName, eventHandler);
    }
 }
 
@@ -202,7 +205,7 @@ function show_auv_message(msg){
 
 //API functions
 function auv_ok(token, card_type){
-   $('#embedded').attr('src', '');
+   $("#embedded").attr("src", "");
    var msg = "Tokenization succeeded.\nToken: " + token + "\nCard type: " + card_type;
    show_auv_message(msg);
    $("#output").addClass("hidden");
@@ -210,19 +213,20 @@ function auv_ok(token, card_type){
 }
 
 function auv_timeout(){
-   $('#embedded').attr('src', '');
+   $("#embedded").attr("src", "");
    show_auv_message("AUV request timed out.");
    $("#output").addClass("hidden");
    $("#credentials-section").removeClass("hidden");
 }
 
 function auv_error(error_code, error_message){
-   $('#embedded').attr('src', '');
+   $("#embedded").attr("src", "");
    var msg = "AUV request failed. Code: " + error_code + ", error: " + error_message;
    show_auv_message(msg);
    $("#output").addClass("hidden");
    $("#credentials-section").removeClass("hidden");
 }
+
 function creditcard_valid(requestId, isValid){
    //message from embedded iframe indicating whether
    //a credit card is valid or not. This message is generated in response
