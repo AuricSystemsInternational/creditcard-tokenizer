@@ -37,11 +37,11 @@ $(document).ready(function() {
 function iFrameLoader(auvSessionId, vaultTraceUID) {
     var auvToken = $("#credentials-form input[name=auvToken]").val();
 
-    $('#embedded').attr(
-        'src',
-        '../embedded-detokenize.html?sessionID=' + auvSessionId +
-        '&vault_trace_uid=' + vaultTraceUID +
-        '&auvToken=' + auvToken);
+    $("#embedded").attr(
+        "src",
+        "../embedded-detokenize.html?sessionID=" + auvSessionId +
+        "&vault_trace_uid=" + vaultTraceUID +
+        "&auvToken=" + auvToken);
     $("#credentials-section").addClass("hidden");
     $("#output-section").removeClass("hidden");
 }
@@ -55,7 +55,7 @@ function bindEvent(element, eventName, eventHandler) {
     if (element.addEventListener){
         element.addEventListener(eventName, eventHandler, false);
     } else if (element.attachEvent) {
-        element.attachEvent('on' + eventName, eventHandler);
+        element.attachEvent("on" + eventName, eventHandler);
     }
 }
 
