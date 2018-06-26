@@ -1,5 +1,5 @@
 /*
- * Load and control the embedded iFrame
+ * Load and control the embedded tokenize iFrame
  *
  * Copyright © 2017-2018 Auric Systems International. All rights reserved.
  * Licensed under The 3-Clause BSD License.
@@ -30,7 +30,7 @@ $(document).ready(function() {
         ajaxGetSession(configuration, mtid, segment, retention, secret, iFrameLoader);
 
         /* ajaxTokenize is async. We will come back here and exit.
-           That's why we needed to do event.preventDefault() above.
+         * That's why we needed to do event.preventDefault() above.
          */
     });
 
@@ -66,11 +66,14 @@ function iFrameLoader(auvSessionId, vaultTraceUID) {
 }
 
 
+// The embedded iFrame.
+var embeddedTokenizer = document.getElementById("embedded");
+
+
 /*
  * Send a message to the embedded iFrame.
  */
 var sendMessage = function(msg) {
-   var embeddedTokenizer = document.getElementById("embedded");
    embeddedTokenizer.contentWindow.postMessage(msg, "*");
 }
 
@@ -115,6 +118,7 @@ function bindEvent(element, eventName, eventHandler) {
        element.attachEvent("on" + eventName, eventHandler);
    }
 }
+
 
 /*
  * Associate each message from the embedded iFrame with
@@ -189,7 +193,7 @@ function auv_ok(token, card_type){
  */
 function auv_timeout(){
    $("#embedded").attr("src", "");
-   show_auv_message("AUV request timed out.");
+   show_auv_message("Session expired.");
    $("#output").addClass("hidden");
    $("#credentials-section").removeClass("hidden");
 }

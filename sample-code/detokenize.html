@@ -7,11 +7,13 @@
     <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>SAMPLE: AuricVault® Embedded iFrame</title>
+    <title>SAMPLE: AuricVault® Embedded Detokenize iFrame</title>
     <link rel="stylesheet" href="./css/bulma.min.css">
     <link rel="stylesheet" href="./css/app.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
     <script src="./js/sha512.js"></script>
+    <script src="./js/uuid4.js"></script>
+    <script src="./js/get-session.js"></script>
     <script src="./js/app-detokenize.js"></script>
     </head>
 
@@ -62,7 +64,8 @@
                     </div>
                 </form>
             <hr>
-
+        </section>
+        <section id="output-section" class="hidden">
             <iframe id="embedded" src=""></iframe>
         </section>
     </div>
