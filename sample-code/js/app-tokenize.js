@@ -1,59 +1,25 @@
 /*
-* Utility functions for the sample AuricVault® service
-* browser-side tokenization demo.
-*
-* Copyright © 2017-2018 Auric Systems International. All rights reserved.
-* Licensed under The 3-Clause BSD License.
-*/
-
+ * Load and control the embedded iFrame
+ *
+ * Copyright © 2017-2018 Auric Systems International. All rights reserved.
+ * Licensed under The 3-Clause BSD License.
+ */
 
 "use strict";
 
-var vault_url = "https://vault02-sb.auricsystems.com/vault/v2/";
-
-// track the creditcardvalidation request id
-var ccRequestId = "";
-
-
-function toHex(str) {
-    var hex = "";
-    for (var i=0;i<str.length;i++) {
-        hex += ""+str.charCodeAt(i).toString(16);
-    }
-    return hex;
-}
-
-/* String Substitution */
-String.prototype.format = function() {
-    var formatted = this;
-    for ( var arg in arguments ) {
-        formatted = formatted.replace("{" + arg + "}", arguments[arg]);
-    }
-    return formatted;
-};
-
-
-/* UTC Timestamp (in seconds) */
-function utcTimestamp() {
-    var x = new Date();
-    return Math.floor((x.getTime()) / 1000).toString();
-};
-
-
-/*  Random Ajax transaction identifier. Between 0 and 1,000,000.
-    NOTE: ajax_id MUST be an integer, not a string.
+/*
+ * Bind to the submit button on the credentials form.
+ * The Ajax call to get session asynchronously calls the iFrameLoader function.
+ * In production, you'll typically call the iFrameLoader function when the
+ * parent page loads.
  */
-function generateAjaxId() {
-    return Math.floor((Math.random() * 1000000) + 1);
-};
-
 $(document).ready(function() {
-    /* Bind to the button. */
+    /* Bind to the submit button on the credentials form. */
     $("#credentials-form").submit(function(event) {
-        /* need to call prevent-default because the Ajax call is asynchronous */
+        /* Need to call prevent-default because the Ajax call is asynchronous */
         event.preventDefault();
 
-        // Gather the data.
+        // Gather the credentials.
         var configuration = $("#credentials-form input[name=configuration]").val();
         var mtid = $("#credentials-form input[name=mtid]").val();
         var segment = $("#credentials-form input[name=segment]").val();
@@ -61,13 +27,19 @@ $(document).ready(function() {
         var retention = $("#credentials-form input[name=retention]").val();
 
         /* Get us a session. */
-        ajaxGetSession(configuration, mtid, segment, retention, secret);
+        ajaxGetSession(configuration, mtid, segment, retention, secret, iFrameLoader);
 
         /* ajaxTokenize is async. We will come back here and exit.
            That's why we needed to do event.preventDefault() above.
          */
     });
 
+    /*
+     * Bind to the Tokenize button.
+     * Calls async function to check that card is valid.
+     * The response from the embedded iFrame triggers the actual tokenization.
+     * See the auv_credit_card_valid function.
+     */
     $("#tokenize").click(function(event){
          event.preventDefault();
 
@@ -75,9 +47,38 @@ $(document).ready(function() {
     });
 });
 
-function validateCreditCard(){
 
-    //A sample request ID
+/*
+ * Load the iFrame.
+ * Pass in the sessionID and the trace ID.
+ * The trace ID is used for troubleshooting.
+ */
+function iFrameLoader(auvSessionId, vaultTraceUID) {
+    var cardtypes = $("#cardTypes").val();
+
+    $("#embedded").attr(
+        "src",
+        "../embedded-tokenize.html?sessionID=" + auvSessionId +
+        "&vault_trace_uid=" + vaultTraceUID +
+        "&cardTypes=" + cardtypes);
+    $("#credentials-section").addClass("hidden");
+    $("#output").removeClass("hidden");
+}
+
+
+/*
+ * Send a message to the embedded iFrame.
+ */
+var sendMessage = function(msg) {
+   var embeddedTokenizer = document.getElementById("embedded");
+   embeddedTokenizer.contentWindow.postMessage(msg, "*");
+}
+
+
+/*
+ * Send validation message to the iFrame to check the validity of the credit card number.
+ */
+function validateCreditCard(){
     var requestId = "isCreditCardValid:" + Math.random();
     var msg = {
         tag: "isCreditCardValid",
@@ -88,78 +89,13 @@ function validateCreditCard(){
     return requestId;
 }
 
-function ajaxGetSession(configuration, mtid, segment, retention, secret) {
-    var params = {
-        "id": generateAjaxId(),
-        "method": "get_session",
-        "params": [{
-            "utcTimestamp": utcTimestamp(),
-            "configurationId": configuration,
-            "mtid": mtid,
-            "retention": retention,
-            "segment": segment
-            }]
-        };
-    var vault_trace_uid = uuid4();
-    var json_data = JSON.stringify(params)
-    var hex_secret = toHex(secret)
-    var hash = new jsSHA("SHA-512", "TEXT")
-    hash.setHMACKey(hex_secret, "HEX")
-    hash.update(json_data)
-    var hmac = hash.getHMAC("HEX")
 
-    $.ajax({
-        type: "POST",
-        url: vault_url,
-        beforeSend: function(xhr) {
-            xhr.setRequestHeader("X-VAULT-HMAC", hmac);
-            xhr.setRequestHeader("X-VAULT-TRACE-UID", vault_trace_uid);
-            },
-        crossDomain: true,
-        dataType: "json",
-        timeout: 1000 * 5,
-        data: json_data,
-        success: function(data, textStatus, jqXHR) {
-            var json = JSON.stringify(data);
-            var las = data["result"]["lastActionSucceeded"];
-            if(0 == las) {
-               console.log("Problem..");
-               // alert("We've experienced a processing error. Please try again.");
-                /* This would be a good place to log an error
-                   using whatever error tracking system you have.
-
-                   Never show the following alert in production.
-                 */
-                alert(data["error"]);
-            } else {
-                /* Load the embedded iFrame */
-                console.log("SUCCESS!!");
-
-                var sessionId = data["result"]["sessionId"];
-                var cardtypes = $("#cardTypes").val();
-
-               $("#embedded").attr(
-                    "src",
-                    "../embedded-tokenize.html?sessionID=" + sessionId +
-                    "&vault_trace_uid=" + vault_trace_uid +
-                    "&cardTypes=" + cardtypes);
-               $("#credentials-section").addClass("hidden");
-               $("#output").removeClass("hidden");
-            };
-        },
-        error: function(jqXHR, textStatus, errorThrown) {
-            console.log("ISSUES!!");
-            // Another good place to log an error.
-            // alert("We've experienced a processing error. Please try again.");
-            // Never show alert in production.
-            alert(errorThrown);
-        },
-    });
-}
-
+/*
+ * Send tokenization message to iFrame requesting tokenization.
+ * Do not send this message until after you've confirmed the credit card
+ * number is valid.
+ */
 function tokenize(){
-    // Validation returned successfully.
-    // Send tokenization request to iFrame.
     var msg = {
         tag: "tokenize"
     };
@@ -168,12 +104,10 @@ function tokenize(){
 
 }
 
-//send a message to the iFrame
-var sendMessage = function(msg) {
-   var embeddedTokenizer = document.getElementById("embedded");
-   embeddedTokenizer.contentWindow.postMessage(msg, "*");
-}
 
+/*
+ * Associate messages with functions.
+ */
 function bindEvent(element, eventName, eventHandler) {
    if (element.addEventListener){
        element.addEventListener(eventName, eventHandler, false);
@@ -182,8 +116,12 @@ function bindEvent(element, eventName, eventHandler) {
    }
 }
 
+/*
+ * Associate each message from the embedded iFrame with
+ * a local function.
+ */
 bindEvent(window, "message", function(e){
-   //console.log(e);
+   // console.log(e);
    var tag = e.data.tag || "";
    var data = e.data.data;
 
@@ -194,16 +132,48 @@ bindEvent(window, "message", function(e){
    } else if (tag == "auv_timeout"){
        auv_timeout();
    } else if (tag == "cc_valid"){
-       creditcard_valid(data.requestId, data.isValid);
+       auv_creditcard_valid(data.requestId, data.isValid);
    }
 
 })
 
+
+/*
+ * Show errors and messages.
+ * In production, you hook in your own data flow and messaging.
+ */
 function show_auv_message(msg){
    alert(msg);
 }
 
-//API functions
+/* ******
+ * Messages sent by the embedded iFrame
+ * ***** */
+
+
+/*
+ * Message from the embedded iFrame indicating whether the credit card number is valid.
+ * This message is generated in response to an isCreditCardValid request and is
+ * identified by the request ID.
+ * If the card number is valid, the tokenization message to the embedded iFrame
+ * is automatically triggered.
+ */
+function auv_creditcard_valid(requestId, isValid){
+   if (isValid && requestId === ccRequestId) {
+       // console.log("Credit card data is valid. Tokenizing...")
+       tokenize();
+   }
+   else {
+       var msg = "Credit card data is not valid.";
+       show_auv_message(msg);
+   }
+}
+
+
+/*
+ * Successful tokenization.
+ * Message contains the token and the method of payment.
+ */
 function auv_ok(token, card_type){
    $("#embedded").attr("src", "");
    var msg = "Tokenization succeeded.\nToken: " + token + "\nCard type: " + card_type;
@@ -212,6 +182,11 @@ function auv_ok(token, card_type){
    $("#credentials-section").removeClass("hidden");
 }
 
+
+/*
+ * The AuricVault sessionID's lifetime was exceeded.
+ * Need to get new sessionID.
+ */
 function auv_timeout(){
    $("#embedded").attr("src", "");
    show_auv_message("AUV request timed out.");
@@ -219,27 +194,17 @@ function auv_timeout(){
    $("#credentials-section").removeClass("hidden");
 }
 
+
+/*
+ * An error occurred.
+ * In production, you may want to log this.
+ * Auric recommends you include the vaultTraceUID in your logs.
+ * This will help with problem solving.
+ */
 function auv_error(error_code, error_message){
    $("#embedded").attr("src", "");
    var msg = "AUV request failed. Code: " + error_code + ", error: " + error_message;
    show_auv_message(msg);
    $("#output").addClass("hidden");
    $("#credentials-section").removeClass("hidden");
-}
-
-function creditcard_valid(requestId, isValid){
-   //message from embedded iframe indicating whether
-   //a credit card is valid or not. This message is generated in response
-   //to a isCreditCardValid request identified by the request id
-   //Further action can be taken here based on that response
-
-   //now tokenize of valid and requestId matches
-   if (isValid && requestId === ccRequestId) {
-       console.log("Credit card data is valid. Tokenizing...")
-       tokenize();
-   }
-   else {
-       var msg = "Credit card data is not valid.";
-       show_auv_message(msg);
-   }
 }
