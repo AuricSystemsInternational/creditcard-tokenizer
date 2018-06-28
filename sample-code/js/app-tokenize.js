@@ -66,15 +66,12 @@ function iFrameLoader(auvSessionId, vaultTraceUID) {
 }
 
 
-// The embedded iFrame.
-var embeddedTokenizer = document.getElementById("embedded");
-
-
 /*
  * Send a message to the embedded iFrame.
  */
 var sendMessage = function(msg) {
-   embeddedTokenizer.contentWindow.postMessage(msg, "*");
+    var embeddedTokenizer = document.getElementById("embedded");
+    embeddedTokenizer.contentWindow.postMessage(msg, "*");
 }
 
 
