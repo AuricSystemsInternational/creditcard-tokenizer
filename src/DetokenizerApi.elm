@@ -2,7 +2,11 @@
 -- License: 3-Clause BSD License. See accompanying LICENSE file.
 
 
-port module DetokenizerApi exposing (..)
+port module DetokenizerApi
+    exposing
+        ( DetokenizeOutgoingMessage(..)
+        , sendMessageOut
+        )
 
 import Json.Encode as JE
 

@@ -2,7 +2,14 @@
 -- License: 3-Clause BSD License. See accompanying LICENSE file.
 
 
-port module TokenizerApi exposing (..)
+port module TokenizerApi
+    exposing
+        ( IncomingMessage(..)
+        , OutgoingMessage(..)
+        , Token
+        , getIncomingMessage
+        , sendMessageOut
+        )
 
 import CreditCardValidator as CCV
 import Json.Decode as JD
@@ -132,5 +139,5 @@ getIncomingMessage tagger onError =
                         )
 
                 _ ->
-                    onError <| "Unexpected external message" ++ toString externalInfo
+                    onError <| "Unexpected external message for " ++ externalInfo.tag
         )
