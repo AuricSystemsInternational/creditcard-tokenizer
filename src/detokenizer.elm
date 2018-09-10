@@ -24,12 +24,14 @@ type alias Model =
     , decryptOnTick : Bool -- so that attempt is made to get token when valid time available
     , location : Url.Url
     , key : Nav.Key
+    , vaultTraceId : Maybe String
     }
 
 
 type alias Flags =
     { sessionID : Maybe String
     , auvToken : Maybe String
+    , vaultTraceId : Maybe String
     }
 
 
@@ -42,8 +44,8 @@ type Msg
     | NoOp
 
 
-initModel : Maybe String -> Maybe String -> Url.Url -> Nav.Key -> Model
-initModel sessionID auvToken location key =
+initModel : Maybe String -> Maybe String -> Url.Url -> Nav.Key -> Maybe String -> Model
+initModel sessionID auvToken location key traceId =
     { sessionID = sessionID
     , auvToken = auvToken
     , decryptedToken = Nothing
@@ -51,14 +53,15 @@ initModel sessionID auvToken location key =
     , decryptOnTick = True
     , location = location
     , key = key
+    , vaultTraceId = traceId
     }
 
 
 init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
-init { sessionID, auvToken } location key =
+init { sessionID, auvToken, vaultTraceId } location key =
     let
         model =
-            initModel sessionID auvToken location key
+            initModel sessionID auvToken location key vaultTraceId
     in
     ( model, Cmd.none )
 
@@ -103,6 +106,13 @@ onDetokenize model =
 
             headers =
                 []
+                    ++ (model.vaultTraceId
+                            |> Maybe.map
+                                (\traceId ->
+                                    [ Http.header "X-VAULT-TRACE-UID" traceId ]
+                                )
+                            |> Maybe.withDefault []
+                       )
 
             decoder =
                 deTokenizeResponsePayloadDecoder

@@ -28,7 +28,8 @@
         sessionID: getParameterByName("sessionID") || "",
         auvToken: getParameterByName("auvToken"),
         //Change target to "test" or "prod". Empty string is considered prod
-        target: "dev"
+        target: "dev",
+        vaultTraceId: getParameterByName("vault_trace_uid")
     };
     var elmApp = Elm.Detokenizer.init({
         node: elmDiv,

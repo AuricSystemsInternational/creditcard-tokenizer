@@ -33,12 +33,14 @@ type alias Model =
     , initialTime : Posix
     , location : Url.Url
     , key : Nav.Key
+    , vaultTraceId : Maybe String
     }
 
 
 type alias Flags =
     { sessionID : Maybe String
     , cardTypes : Maybe String
+    , vaultTraceId : Maybe String
     }
 
 
@@ -83,10 +85,10 @@ init flags location key =
         locFlags =
             flags
 
-        ( sessionID, cardTypes ) =
+        ( sessionID, cardTypes, traceId ) =
             parseFlags flags
     in
-    ( initModel sessionID cardTypes location key
+    ( initModel sessionID cardTypes location key traceId
     , cmdGetTime OnGetInitialTime
     )
 
@@ -96,8 +98,8 @@ cmdGetTime callback =
     Task.perform callback Time.now
 
 
-initModel : Maybe String -> List CCV.CardType -> Url.Url -> Nav.Key -> Model
-initModel sessionID cardTypes location key =
+initModel : Maybe String -> List CCV.CardType -> Url.Url -> Nav.Key -> Maybe String -> Model
+initModel sessionID cardTypes location key traceId =
     { ccNumber = ""
     , ccNumberError = Just msgInvalidCCNumber
     , ccNumberValid = False
@@ -109,6 +111,7 @@ initModel sessionID cardTypes location key =
     , initialTime = Time.millisToPosix 0
     , location = location
     , key = key
+    , vaultTraceId = traceId
     }
 
 
@@ -140,8 +143,8 @@ parseCardTypes str =
     cardTypes
 
 
-parseFlags : Flags -> ( Maybe String, List CCV.CardType )
-parseFlags { sessionID, cardTypes } =
+parseFlags : Flags -> ( Maybe String, List CCV.CardType, Maybe String )
+parseFlags { sessionID, cardTypes, vaultTraceId } =
     let
         -- parse cardTypes
         actualCardTypes =
@@ -152,7 +155,7 @@ parseFlags { sessionID, cardTypes } =
                 Nothing ->
                     []
     in
-    ( sessionID, actualCardTypes )
+    ( sessionID, actualCardTypes, vaultTraceId )
 
 
 onIsCreditCardValid : Model -> String -> Cmd msg
@@ -377,6 +380,13 @@ onTokenize model =
 
         headers =
             []
+                ++ (model.vaultTraceId
+                        |> Maybe.map
+                            (\traceId ->
+                                [ Http.header "X-VAULT-TRACE-UID" traceId ]
+                            )
+                        |> Maybe.withDefault []
+                   )
 
         decoder =
             Auv.tokenizeResponsePayloadDecoder
