@@ -36,7 +36,7 @@ isNotAscii char =
         code =
             Char.toCode char
     in
-    code < 0x20 && 0x7E < code
+    code < 0x20 || code > 0x7E
 
 
 isNothingOrEmpty : Maybe String -> Bool
