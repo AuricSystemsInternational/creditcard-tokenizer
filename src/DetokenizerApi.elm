@@ -30,6 +30,7 @@ type DetokenizeOutgoingMessage
     | Auv_Timeout
     | Auv_Error ErrorCode ErrorMessage
     | LogError String -- for all general non Auv errors
+    | ValidationErrors (List String)
 
 
 port outgoing : ApiMessage -> Cmd msg
@@ -60,3 +61,6 @@ sendMessageOut info =
 
         Auv_Decrypted ->
             outgoing { tag = "auv_decrypted", data = JE.null }
+
+        ValidationErrors errors ->
+            outgoing { tag = "validation_errors", data = JE.list JE.string errors }

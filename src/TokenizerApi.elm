@@ -34,6 +34,7 @@ type OutgoingMessage
     | Auv_Error ErrorCode ErrorMessage
     | LogError String -- for all general non Auv errors
     | CreditCardValid String Bool
+    | ValidationErrors (List String)
 
 
 type IncomingMessage
@@ -120,6 +121,9 @@ sendMessageOut info =
 
         CreditCardValid requestId valid ->
             outgoing { tag = "cc_valid", data = encodeCCValidData requestId valid }
+
+        ValidationErrors errors ->
+            outgoing { tag = "validation_errors", data = JE.list JE.string errors }
 
 
 getIncomingMessage : (IncomingMessage -> msg) -> (String -> msg) -> Sub msg

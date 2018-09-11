@@ -25,7 +25,7 @@
     var elmDiv = document.getElementById("elm-container");
     //        console.log("EMBED: " + this.location);
     var appParams = {
-        sessionID: getParameterByName("sessionID") || "",
+        sessionID: getParameterByName("sessionID"),
         auvToken: getParameterByName("auvToken"),
         //Change target to "test" or "prod". Empty string is considered prod
         target: "dev",
@@ -57,10 +57,11 @@
 
     elmApp.ports.outgoing.subscribe(msg => {
         if (msg.tag == "auv_decrypted" || msg.tag == "auv_error"
-            || msg.tag == "auv_timeout") {
+            || msg.tag == "auv_timeout"
+            || msg.tag == "validation_errors"
+        ) {
             //send message along to the parent
             sendMessage(msg);
-            //                console.log("AUV message sent to parent.")
         }
 
         else if (msg.tag == "log_error") {

@@ -11,15 +11,14 @@ module Auv
         , TokenizeResult
         , deTokenResultDecoder
         , deTokenizeResponsePayloadDecoder
-        , httpErrorToString
         , mapEnvironment
         , post
-        , toSeconds
         , tokenResultDecoder
         , tokenizeResponsePayloadDecoder
         , vault_url
         )
 
+import Char
 import Http
 import Json.Decode as JD
 import Json.Decode.Pipeline as JDP
@@ -140,29 +139,3 @@ post url headers body decoder =
         , timeout = Just 10000
         , withCredentials = False
         }
-
-
-{-| Just return the raw error string
--}
-httpErrorToString : Http.Error -> String
-httpErrorToString error =
-    case error of
-        Http.BadUrl url ->
-            url
-
-        Http.Timeout ->
-            "Timeout"
-
-        Http.NetworkError ->
-            "Network error"
-
-        Http.BadStatus response ->
-            response.body
-
-        Http.BadPayload str1 _ ->
-            str1
-
-
-toSeconds : Time.Posix -> Int
-toSeconds time =
-    Time.posixToMillis time // 1000

@@ -9,6 +9,7 @@ import Browser
 import Browser.Navigation as Nav
 import Char exposing (isDigit)
 import CreditCardValidator as CCV
+import Helpers
 import Html exposing (Html, div, img, input, span, text)
 import Html.Attributes exposing (alt, class, classList, maxlength, placeholder, src, type_)
 import Html.Events exposing (onInput)
@@ -78,6 +79,14 @@ msgInvalidCCType =
     "We do not accept this card brand."
 
 
+parameterErrorCmd : List String -> Cmd msg
+parameterErrorCmd errors =
+    if List.length errors > 0 then
+        TA.sendMessageOut (TA.ValidationErrors errors)
+    else
+        Cmd.none
+
+
 init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags location key =
     -- extract from flags
@@ -87,9 +96,17 @@ init flags location key =
 
         ( sessionID, cardTypes, traceId ) =
             parseFlags flags
+
+        model =
+            initModel sessionID cardTypes location key traceId
+
+        errCmds =
+            model
+                |> Helpers.validateCommonParameters
+                |> parameterErrorCmd
     in
     ( initModel sessionID cardTypes location key traceId
-    , cmdGetTime OnGetInitialTime
+    , Cmd.batch [ errCmds, cmdGetTime OnGetInitialTime ]
     )
 
 
@@ -313,9 +330,16 @@ update msg model =
                     let
                         timeup =
                             sessionActiveFor model > secondsValidFor
+
+                        errCmds =
+                            model
+                                |> Helpers.validateCommonParameters
+                                |> parameterErrorCmd
                     in
                     if timeup then
                         ( model, cmdTimeOut )
+                    else if errCmds /= Cmd.none then
+                        ( model, errCmds )
                     else if isCreditCardValid model then
                         onTokenize model
                     else
@@ -334,7 +358,7 @@ update msg model =
             ( model, onTokenizeResponseSuccess model payload )
 
         TokenizeResponse (Err err) ->
-            ( model, onTokenizeFail (Auv.httpErrorToString err) )
+            ( model, onTokenizeFail (Helpers.httpErrorToString err) )
 
         OnGetInitialTime time ->
             ( { model | initialTime = time }, Cmd.none )
@@ -360,12 +384,12 @@ update msg model =
 
 onTokenize : Model -> ( Model, Cmd Msg )
 onTokenize model =
-    --  credit card info should be valid by now
+    --  called after creditcard info and tokenization params have been validated
     let
         contentBody =
             JE.object
                 [ ( "sessionId", JE.string (Maybe.withDefault "" model.sessionID) )
-                , ( "utcTimestamp", JE.string (model.currentTime |> Auv.toSeconds |> String.fromInt) )
+                , ( "utcTimestamp", JE.string (model.currentTime |> Helpers.toSeconds |> String.fromInt) )
                 , ( "plaintextValue", JE.string (CCV.toCleanCCNumber model.ccNumber) )
                 ]
 
@@ -401,10 +425,6 @@ onTokenize model =
             Http.send TokenizeResponse request
     in
     ( model, cmd )
-
-
-
-{- Generates custom request with timeout info -}
 
 
 onTokenizeResponseSuccess : Model -> Auv.TokenizeResponsePayload -> Cmd msg

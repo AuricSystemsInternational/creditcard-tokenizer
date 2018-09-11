@@ -8,6 +8,7 @@ import Auv exposing (..)
 import Browser
 import Browser.Navigation as Nav
 import DetokenizerApi as DTA exposing (..)
+import Helpers
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Http
@@ -57,17 +58,45 @@ initModel sessionID auvToken location key traceId =
     }
 
 
+parameterErrorCmd : List String -> Cmd msg
+parameterErrorCmd errors =
+    if List.length errors > 0 then
+        DTA.sendMessageOut (DTA.ValidationErrors errors)
+    else
+        Cmd.none
+
+
 init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init { sessionID, auvToken, vaultTraceId } location key =
     let
         model =
             initModel sessionID auvToken location key vaultTraceId
+
+        errCmd =
+            model
+                |> Helpers.validateCommonParameters
+                |> parameterErrorCmd
     in
-    ( model, Cmd.none )
+    ( model, errCmd )
 
 
 
 --        onDetokenize model
+
+
+validateParameters : Model -> List String
+validateParameters model =
+    let
+        tokenErrors =
+            if Helpers.isNothingOrEmpty model.auvToken then
+                [ "Missing token" ]
+            else
+                []
+
+        commonValidationErrors =
+            Helpers.validateCommonParameters model
+    in
+    tokenErrors ++ commonValidationErrors
 
 
 onDetokenize : Model -> ( Model, Cmd Msg )
@@ -75,12 +104,20 @@ onDetokenize model =
     let
         updatedModel =
             { model | decryptOnTick = False }
+
+        errCmds =
+            model
+                |> validateParameters
+                |> parameterErrorCmd
     in
-    if model.auvToken == Nothing then
-        ( updatedModel, DTA.sendMessageOut (DTA.LogError "Missing token") )
-    else if model.sessionID == Nothing then
-        ( updatedModel, DTA.sendMessageOut (DTA.LogError "Missing session ID") )
+    if errCmds /= Cmd.none then
+        ( updatedModel, errCmds )
     else
+        -- if model.auvToken == Nothing then
+        --     ( updatedModel, DTA.sendMessageOut (DTA.LogError "Missing token") )
+        -- else if model.sessionID == Nothing then
+        --     ( updatedModel, DTA.sendMessageOut (DTA.LogError "Missing session ID") )
+        -- else
         let
             contentBody =
                 JE.object
@@ -88,7 +125,7 @@ onDetokenize model =
                     , ( "utcTimestamp"
                       , JE.string
                             (model.currentTime
-                                |> Auv.toSeconds
+                                |> Helpers.toSeconds
                                 |> String.fromInt
                             )
                       )
@@ -184,7 +221,7 @@ update msg model =
             onDetokenizeResponseSuccess model payload
 
         DetokenizeResponse (Err err) ->
-            ( model, onDetokenizeFail (Auv.httpErrorToString err) )
+            ( model, onDetokenizeFail (Helpers.httpErrorToString err) )
 
         Tick newTime ->
             let

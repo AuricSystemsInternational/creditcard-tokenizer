@@ -31,7 +31,7 @@
     //always send in the params. Set cardTypes and priorToDate to null
     //if no values available
     var appParams = {
-        sessionID: getParameterByName("sessionID") || "",
+        sessionID: getParameterByName("sessionID"),
         cardTypes: getParameterByName("cardTypes"),
         priorToDate: getParameterByName("priorToDate"),
         //Change target to "test" or "prod". Empty string is considered prod 
@@ -69,13 +69,14 @@
 
     elmApp.ports.outgoing.subscribe(msg => {
         if (msg.tag == "auv_ok" || msg.tag == "auv_error"
-            || msg.tag == "auv_timeout") {
+            || msg.tag == "auv_timeout"
+            || msg.tag == "cc_valid"
+            || msg.tag == "validation_errors"
+
+        ) {
             //send message along to the parent
             sendMessage(msg);
-        } else if (msg.tag == "cc_valid") {
-            sendMessage(msg);
         }
-
         else if (msg.tag == "log_error") {
             // just to log error coming out of elm tokenizer 
             console.error(msg.data);

@@ -13,9 +13,9 @@
  * In production, you'll typically call the iFrameLoader function when the
  * parent page loads.
  */
-$(document).ready(function() {
+$(document).ready(function () {
     /* Bind to the submit button on the credentials form. */
-    $("#credentials-form").submit(function(event) {
+    $("#credentials-form").submit(function (event) {
         /* Need to call prevent-default because the Ajax call is asynchronous */
         event.preventDefault();
 
@@ -40,10 +40,10 @@ $(document).ready(function() {
      * The response from the embedded iFrame triggers the actual tokenization.
      * See the auv_credit_card_valid function.
      */
-    $("#tokenize").click(function(event){
-         event.preventDefault();
+    $("#tokenize").click(function (event) {
+        event.preventDefault();
 
-         ccRequestId =  validateCreditCard();
+        ccRequestId = validateCreditCard();
     });
 });
 
@@ -69,7 +69,7 @@ function iFrameLoader(auvSessionId, vaultTraceUID) {
 /*
  * Send a message to the embedded iFrame.
  */
-var sendMessage = function(msg) {
+var sendMessage = function (msg) {
     var embeddedTokenizer = document.getElementById("embedded");
     embeddedTokenizer.contentWindow.postMessage(msg, "*");
 }
@@ -78,7 +78,7 @@ var sendMessage = function(msg) {
 /*
  * Send validation message to the iFrame to check the validity of the credit card number.
  */
-function validateCreditCard(){
+function validateCreditCard() {
     var requestId = "isCreditCardValid:" + Math.random();
     var msg = {
         tag: "isCreditCardValid",
@@ -95,7 +95,7 @@ function validateCreditCard(){
  * Do not send this message until after you've confirmed the credit card
  * number is valid.
  */
-function tokenize(){
+function tokenize() {
     var msg = {
         tag: "tokenize"
     };
@@ -109,11 +109,11 @@ function tokenize(){
  * Associate messages with functions.
  */
 function bindEvent(element, eventName, eventHandler) {
-   if (element.addEventListener){
-       element.addEventListener(eventName, eventHandler, false);
-   } else if (element.attachEvent) {
-       element.attachEvent("on" + eventName, eventHandler);
-   }
+    if (element.addEventListener) {
+        element.addEventListener(eventName, eventHandler, false);
+    } else if (element.attachEvent) {
+        element.attachEvent("on" + eventName, eventHandler);
+    }
 }
 
 
@@ -121,30 +121,46 @@ function bindEvent(element, eventName, eventHandler) {
  * Associate each message from the embedded iFrame with
  * a local function.
  */
-bindEvent(window, "message", function(e){
-   // console.log(e);
-   var tag = e.data.tag || "";
-   var data = e.data.data;
+bindEvent(window, "message", function (e) {
+    // console.log(e);
+    var tag = e.data.tag || "";
+    var data = e.data.data;
 
-   if (tag == "auv_ok"){
-       auv_ok(data.token, data.cardType)
-   } else if (tag == "auv_error"){
-       auv_error(data.code, data.message);
-   } else if (tag == "auv_timeout"){
-       auv_timeout();
-   } else if (tag == "cc_valid"){
-       auv_creditcard_valid(data.requestId, data.isValid);
-   }
+    if (tag == "auv_ok") {
+        auv_ok(data.token, data.cardType)
+    } else if (tag == "auv_error") {
+        auv_error(data.code, data.message);
+    } else if (tag == "auv_timeout") {
+        auv_timeout();
+    } else if (tag == "cc_valid") {
+        auv_creditcard_valid(data.requestId, data.isValid);
+    } else if (tag == "validation_errors") {
+        show_validation_errors(data);
+    }
 
 })
 
+function show_validation_errors(data) {
+
+    console.log(data);
+
+    $("#embedded").attr("src", "");
+    var msg = "Validation errors: \n";
+    var len = data.length;
+    for (var i = 0; i < len; i++) {
+        msg += data[i] + "\n";
+    }
+    show_auv_message(msg);
+    $("#output").addClass("hidden");
+    $("#credentials-section").removeClass("hidden");
+}
 
 /*
  * Show errors and messages.
  * In production, you hook in your own data flow and messaging.
  */
-function show_auv_message(msg){
-   alert(msg);
+function show_auv_message(msg) {
+    alert(msg);
 }
 
 /* ******
@@ -159,15 +175,15 @@ function show_auv_message(msg){
  * If the card number is valid, the tokenization message to the embedded iFrame
  * is automatically triggered.
  */
-function auv_creditcard_valid(requestId, isValid){
-   if (isValid && requestId === ccRequestId) {
-       // console.log("Credit card data is valid. Tokenizing...")
-       tokenize();
-   }
-   else {
-       var msg = "Credit card data is not valid.";
-       show_auv_message(msg);
-   }
+function auv_creditcard_valid(requestId, isValid) {
+    if (isValid && requestId === ccRequestId) {
+        // console.log("Credit card data is valid. Tokenizing...")
+        tokenize();
+    }
+    else {
+        var msg = "Credit card data is not valid.";
+        show_auv_message(msg);
+    }
 }
 
 
@@ -175,12 +191,12 @@ function auv_creditcard_valid(requestId, isValid){
  * Successful tokenization.
  * Message contains the token and the method of payment.
  */
-function auv_ok(token, card_type){
-   $("#embedded").attr("src", "");
-   var msg = "Tokenization succeeded.\nToken: " + token + "\nCard type: " + card_type;
-   show_auv_message(msg);
-   $("#output").addClass("hidden");
-   $("#credentials-section").removeClass("hidden");
+function auv_ok(token, card_type) {
+    $("#embedded").attr("src", "");
+    var msg = "Tokenization succeeded.\nToken: " + token + "\nCard type: " + card_type;
+    show_auv_message(msg);
+    $("#output").addClass("hidden");
+    $("#credentials-section").removeClass("hidden");
 }
 
 
@@ -188,11 +204,11 @@ function auv_ok(token, card_type){
  * The AuricVault sessionID's lifetime was exceeded.
  * Need to get new sessionID.
  */
-function auv_timeout(){
-   $("#embedded").attr("src", "");
-   show_auv_message("Session expired.");
-   $("#output").addClass("hidden");
-   $("#credentials-section").removeClass("hidden");
+function auv_timeout() {
+    $("#embedded").attr("src", "");
+    show_auv_message("Session expired.");
+    $("#output").addClass("hidden");
+    $("#credentials-section").removeClass("hidden");
 }
 
 
@@ -202,10 +218,10 @@ function auv_timeout(){
  * Auric recommends you include the vaultTraceUID in your logs.
  * This will help with problem solving.
  */
-function auv_error(error_code, error_message){
-   $("#embedded").attr("src", "");
-   var msg = "AUV request failed. Code: " + error_code + ", error: " + error_message;
-   show_auv_message(msg);
-   $("#output").addClass("hidden");
-   $("#credentials-section").removeClass("hidden");
+function auv_error(error_code, error_message) {
+    $("#embedded").attr("src", "");
+    var msg = "AUV request failed. Code: " + error_code + ", error: " + error_message;
+    show_auv_message(msg);
+    $("#output").addClass("hidden");
+    $("#credentials-section").removeClass("hidden");
 }
