@@ -1,5 +1,9 @@
 {
     "type": "application",
+    "summary": "iFrame to tokenize credit card account numbers for the AuricVault® service.",
+    "repository": "https://github.com/AuricSystemsInternational/creditcard-tokenizer.git",
+    "license": "BSD-3-Clause",
+    "version": "0.2.0",
     "source-directories": [
         "src",
         "../creditcard-validator/src"
