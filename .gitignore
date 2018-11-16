@@ -10,6 +10,8 @@ bu/
 
 # Built files
 elm-detokenizer.js
+elm-detokenizer.min.js
 elm-tokenizer.js
+elm-tokenizer.min.js
 deploy/
 iframe-deploy-*.tar.gz
