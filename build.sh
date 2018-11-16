@@ -12,19 +12,28 @@ set -o nounset
 
 BUILD_DETOKENIZER=true
 BUILD_TOKENIZER=true
-MINIFY=false
+MINIFY=true
+#OPTIMIZE=
+OPTIMIZE="--optimize"
+
+TJS="elm-tokenizer.js"
+MINTJS="elm-tokenizer.min.js"
+DJS="elm-detokenizer.js"
+MINDJS="elm-detokenizer.min.js"
+
 DEBUG=
 #DEBUG="--debug"
 if ${BUILD_TOKENIZER}; then
-elm make src/tokenizer.elm ${DEBUG} --warn --output elm-tokenizer.js
+elm make src/tokenizer.elm ${DEBUG} ${OPTIMIZE} --output=$TJS
 if ${MINIFY}; then
-minify elm-tokenizer.js --clean --template={{filename}}-{{md5}}.min.{{ext}}
+uglifyjs $TJS --compress 'pure_funcs="F2,F3,F4,F5,F6,F7,F8,F9,A2,A3,A4,A5,A6,A7,A8,A9",pure_getters,keep_fargs=false,unsafe_comps,unsafe' | uglifyjs --mangle --output=$MINTJS
 fi
 fi
 if ${BUILD_DETOKENIZER}; then
-elm make src/detokenizer.elm ${DEBUG} --warn --output elm-detokenizer.js
+elm make src/detokenizer.elm ${DEBUG} --output=$DJS
 if ${MINIFY}; then
-minify elm-detokenizer.js --template={{filename}}-{{md5}}.min.{{ext}}
+uglifyjs $DJS --compress 'pure_funcs="F2,F3,F4,F5,F6,F7,F8,F9,A2,A3,A4,A5,A6,A7,A8,A9",pure_getters,keep_fargs=false,unsafe_comps,unsafe' | uglifyjs --mangle --output=$MINDJS
+
 fi
 fi
 

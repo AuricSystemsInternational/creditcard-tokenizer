@@ -7,9 +7,9 @@
 
 "use strict";
 
-$(document).ready(function() {
+$(document).ready(function () {
     /* Bind to the submit button on the credentials form. */
-    $("#credentials-form").submit(function(event) {
+    $("#credentials-form").submit(function (event) {
         /* need to call prevent-default because the Ajax call is asynchronous */
         event.preventDefault();
 
@@ -52,7 +52,7 @@ function iFrameLoader(auvSessionId, vaultTraceUID) {
  * Associate messages with functions.
  */
 function bindEvent(element, eventName, eventHandler) {
-    if (element.addEventListener){
+    if (element.addEventListener) {
         element.addEventListener(eventName, eventHandler, false);
     } else if (element.attachEvent) {
         element.attachEvent("on" + eventName, eventHandler);
@@ -64,26 +64,42 @@ function bindEvent(element, eventName, eventHandler) {
  * Associate each message from the embedded iFrame with
  * a local function.
  */
-bindEvent(window, "message", function(e){
+bindEvent(window, "message", function (e) {
     // console.log(e.data);
     var tag = e.data.tag || "";
     var data = e.data.data;
 
-    if (tag == "auv_decrypted"){
+    if (tag == "auv_decrypted") {
         auv_decrypted();
-    } else if (tag == "auv_error"){
+    } else if (tag == "auv_error") {
         auv_error(data.code, data.message);
-    } else if (tag == "auv_timeout"){
+    } else if (tag == "auv_timeout") {
         auv_timeout();
+    } else if (tag == "validation_errors") {
+        show_validation_errors(data);
     }
 })
 
+function show_validation_errors(data) {
+
+    console.log(data);
+
+    $("#embedded").attr("src", "");
+    var msg = "Validation errors: \n";
+    var len = data.length;
+    for (var i = 0; i < len; i++) {
+        msg += data[i] + "\n";
+    }
+    show_auv_message(msg);
+    $("#output").addClass("hidden");
+    $("#credentials-section").removeClass("hidden");
+}
 
 /*
  * Show errors and messages.
  * In production, you hook in your own data flow and messaging.
  */
-function show_auv_message(msg){
+function show_auv_message(msg) {
     // console.log(msg);
     alert(msg);
 }
@@ -96,7 +112,7 @@ function show_auv_message(msg){
 /*
  * Embedded iFrame displayed successfully decrypted credit card number.
  */
-function auv_decrypted(){
+function auv_decrypted() {
     show_auv_message("Decrypted the AuricVault® token.");
 }
 
@@ -105,7 +121,7 @@ function auv_decrypted(){
  * The AuricVault sessionID's lifetime was exceeded.
  * Need to get new sessionID.
  */
-function auv_timeout(){
+function auv_timeout() {
     $("#embedded").attr("src", "");
     show_auv_message("Session expired.");
     $("#credentials-section").removeClass("hidden");
@@ -119,7 +135,7 @@ function auv_timeout(){
  * Auric recommends you include the vaultTraceUID in your logs.
  * This will help with problem solving.
  */
-function auv_error(error_code, error_message){
+function auv_error(error_code, error_message) {
     var msg = "The AuricVault® service request failed. Code: " + error_code + ", error: " + error_message;
     show_auv_message(msg);
     $("#credentials-section").removeClass("hidden");

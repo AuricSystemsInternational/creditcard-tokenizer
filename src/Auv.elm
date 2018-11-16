@@ -2,13 +2,28 @@
 -- License: 3-Clause BSD License. See accompanying LICENSE file.
 
 
-module Auv exposing (..)
+module Auv
+    exposing
+        ( DetokenizeResponsePayload
+        , DetokenizeResult
+        , TargetEnvironment(..)
+        , TokenizeResponsePayload
+        , TokenizeResult
+        , deTokenResultDecoder
+        , deTokenizeResponsePayloadDecoder
+        , mapEnvironment
+        , post
+        , tokenResultDecoder
+        , tokenizeResponsePayloadDecoder
+        , vault_url
+        )
 
+import Char
 import Http
 import Json.Decode as JD
 import Json.Decode.Pipeline as JDP
-import Navigation as Nav
 import Time
+import Url
 
 
 type TargetEnvironment
@@ -37,7 +52,7 @@ mapEnvironment target =
 -- Talk to sandbox if running outside a vault (probably dev environment).
 
 
-vault_url : Nav.Location -> String
+vault_url : Url.Url -> String
 vault_url location =
     let
         url_fragment =
@@ -66,7 +81,7 @@ type alias DetokenizeResponsePayload =
 
 deTokenResultDecoder : JD.Decoder DetokenizeResult
 deTokenResultDecoder =
-    JDP.decode DetokenizeResult
+    JD.succeed DetokenizeResult
         |> JDP.required "version" JD.string
         |> JDP.required "lastActionSucceeded" JD.int
         |> JDP.optional "plaintextValue" JD.string ""
@@ -75,7 +90,7 @@ deTokenResultDecoder =
 
 deTokenizeResponsePayloadDecoder : JD.Decoder DetokenizeResponsePayload
 deTokenizeResponsePayloadDecoder =
-    JDP.decode DetokenizeResponsePayload
+    JD.succeed DetokenizeResponsePayload
         |> JDP.required "id" JD.int
         |> JDP.required "result" deTokenResultDecoder
         |> JDP.optional "error" JD.string ""
@@ -98,7 +113,7 @@ type alias TokenizeResponsePayload =
 
 tokenResultDecoder : JD.Decoder TokenizeResult
 tokenResultDecoder =
-    JDP.decode TokenizeResult
+    JD.succeed TokenizeResult
         |> JDP.required "version" JD.string
         |> JDP.required "lastActionSucceeded" JD.int
         |> JDP.optional "token" JD.string ""
@@ -107,7 +122,7 @@ tokenResultDecoder =
 
 tokenizeResponsePayloadDecoder : JD.Decoder TokenizeResponsePayload
 tokenizeResponsePayloadDecoder =
-    JDP.decode TokenizeResponsePayload
+    JD.succeed TokenizeResponsePayload
         |> JDP.required "id" JD.int
         |> JDP.required "result" tokenResultDecoder
         |> JDP.optional "error" JD.string ""
@@ -121,6 +136,6 @@ post url headers body decoder =
         , url = url
         , body = body
         , expect = Http.expectJson decoder
-        , timeout = Just (10 * Time.second)
+        , timeout = Just 10000
         , withCredentials = False
         }

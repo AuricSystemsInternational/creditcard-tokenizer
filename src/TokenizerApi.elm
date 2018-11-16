@@ -2,7 +2,14 @@
 -- License: 3-Clause BSD License. See accompanying LICENSE file.
 
 
-port module TokenizerApi exposing (..)
+port module TokenizerApi
+    exposing
+        ( IncomingMessage(..)
+        , OutgoingMessage(..)
+        , Token
+        , getIncomingMessage
+        , sendMessageOut
+        )
 
 import CreditCardValidator as CCV
 import Json.Decode as JD
@@ -27,6 +34,7 @@ type OutgoingMessage
     | Auv_Error ErrorCode ErrorMessage
     | LogError String -- for all general non Auv errors
     | CreditCardValid String Bool
+    | ValidationErrors (List String)
 
 
 type IncomingMessage
@@ -114,6 +122,9 @@ sendMessageOut info =
         CreditCardValid requestId valid ->
             outgoing { tag = "cc_valid", data = encodeCCValidData requestId valid }
 
+        ValidationErrors errors ->
+            outgoing { tag = "validation_errors", data = JE.list JE.string errors }
+
 
 getIncomingMessage : (IncomingMessage -> msg) -> (String -> msg) -> Sub msg
 getIncomingMessage tagger onError =
@@ -132,5 +143,5 @@ getIncomingMessage tagger onError =
                         )
 
                 _ ->
-                    onError <| "Unexpected external message" ++ toString externalInfo
+                    onError <| "Unexpected external message for " ++ externalInfo.tag
         )

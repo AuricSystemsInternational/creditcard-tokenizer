@@ -1,71 +1,80 @@
 <html>
-    <head>
-            <script type="text/javascript" src="elm-detokenizer.js"></script>
-    </head>
+
+<head>
+    <script type="text/javascript" src="elm-detokenizer.min.js"></script>
+    <!-- <script type="text/javascript" src="elm-detokenizer.js"></script> -->
+</head>
+
 <body>
-        <div id="elm-container"></div>
+    <div id="elm-container"></div>
 </body>
 <script type="text/javascript">
 
-        "use strict";
+    "use strict";
 
-        function getParameterByName(name, url) {
-            if (!url) url = window.location.href;
-                name = name.replace(/[\[\]]/g, "\\$&");
-            var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+    function getParameterByName(name, url) {
+        if (!url) url = window.location.href;
+        name = name.replace(/[\[\]]/g, "\\$&");
+        var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
             results = regex.exec(url);
-            if (!results) return null;
-            if (!results[2]) return '';
-            return decodeURIComponent(results[2].replace(/\+/g, " "));
+        if (!results) return null;
+        if (!results[2]) return '';
+        return decodeURIComponent(results[2].replace(/\+/g, " "));
+    }
+
+    var elmDiv = document.getElementById("elm-container");
+    //        console.log("EMBED: " + this.location);
+    var appParams = {
+        sessionID: getParameterByName("sessionID"),
+        auvToken: getParameterByName("auvToken"),
+        //Change target to "test" or "prod". Empty string is considered prod
+        target: "dev",
+        vaultTraceId: getParameterByName("vault_trace_uid")
+    };
+
+    var elmApp = Elm.Detokenizer.init({
+        node: elmDiv,
+        flags: appParams
+    });
+
+    //support for IE8
+    function bindEvent(element, eventName, eventHandler) {
+        if (element.addEventListener) {
+            element.addEventListener(eventName, eventHandler, false);
+        } else if (element.attachEvent) {
+            element.attachEvent("on" + eventName, eventHandler);
+        }
+    }
+
+    //listent to messages from parent
+    bindEvent(window, "message", function (e) {
+        var msg = e.data;
+        if (msg.tag && msg.tag == "detokenize") {
+            elmApp.ports.incoming.send({ tag: "detokenize", data: null });
         }
 
-        var elmDiv = document.getElementById("elm-container");
-//        console.log("EMBED: " + this.location);
-        var appParams = {
-            sessionID: getParameterByName("sessionID") || "",
-            auvToken: getParameterByName("auvToken"),
-            //Change target to "test" or "prod". Empty string is considered prod
-            target: "dev"
-        };
-        var elmApp = Elm.Detokenizer.embed(elmDiv, appParams);
+    });
 
-        //support for IE8
-        function bindEvent(element, eventName, eventHandler){
-            if (element.addEventListener){
-                element.addEventListener(eventName, eventHandler, false);
-            } else if (element.attachEvent){
-                element.attachEvent("on" + eventName, eventHandler);
-            }
+
+    elmApp.ports.outgoing.subscribe(msg => {
+        if (msg.tag == "auv_decrypted" || msg.tag == "auv_error"
+            || msg.tag == "auv_timeout"
+            || msg.tag == "validation_errors"
+        ) {
+            //send message along to the parent
+            sendMessage(msg);
         }
 
-        //listent to messages from parent
-        bindEvent(window, "message", function(e){
-            var msg = e.data;
-            if (msg.tag && msg.tag == "detokenize"){
-                elmApp.ports.incoming.send({tag: "detokenize", data: null});
-            }
-
-        });
-
-
-        elmApp.ports.outgoing.subscribe(msg => {
-            if (msg.tag == "auv_decrypted" || msg.tag == "auv_error"
-                        || msg.tag == "auv_timeout") {
-                //send message along to the parent
-                sendMessage(msg);
-//                console.log("AUV message sent to parent.")
-            }
-
-            else if (msg.tag == "log_error") {
-                // just to log error coming out of elm tokenizer
-                console.error(msg.data);
-            }
-
-        });
-
-        var sendMessage = function(msg){
-            window.parent.postMessage(msg, "*");
+        else if (msg.tag == "log_error") {
+            // just to log error coming out of elm tokenizer
+            console.error(msg.data);
         }
-    </script>
+
+    });
+
+    var sendMessage = function (msg) {
+        window.parent.postMessage(msg, "*");
+    }
+</script>
 
 </html>

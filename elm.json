@@ -1,0 +1,33 @@
+{
+    "type": "application",
+    "summary": "iFrame to tokenize credit card account numbers for the AuricVault® service.",
+    "repository": "https://github.com/AuricSystemsInternational/creditcard-tokenizer.git",
+    "license": "BSD-3-Clause",
+    "version": "1.0.2",
+    "source-directories": [
+        "src"
+    ],
+    "elm-version": "0.19.0",
+    "dependencies": {
+        "direct": {
+            "NoRedInk/elm-json-decode-pipeline": "1.0.0",
+            "elm/browser": "1.0.0",
+            "elm/core": "1.0.0",
+            "elm/html": "1.0.0",
+            "elm/http": "1.0.0",
+            "elm/json": "1.0.0",
+            "elm/regex": "1.0.0",
+            "elm/time": "1.0.0",
+            "elm/url": "1.0.0",
+            "janjelinek/creditcard-validation": "1.0.2",
+            "AuricSystemsInternational/creditcard-validator": "1.0.1"
+        },
+        "indirect": {
+            "elm/virtual-dom": "1.0.0"
+        }
+    },
+    "test-dependencies": {
+        "direct": {},
+        "indirect": {}
+    }
+}
