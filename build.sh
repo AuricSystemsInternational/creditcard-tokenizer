@@ -24,13 +24,13 @@ MINDJS="elm-detokenizer.min.js"
 DEBUG=
 #DEBUG="--debug"
 if ${BUILD_TOKENIZER}; then
-elm.sh make src/tokenizer.elm ${DEBUG} ${OPTIMIZE} --output=$TJS
+elm make src/tokenizer.elm ${DEBUG} ${OPTIMIZE} --output=$TJS
 if ${MINIFY}; then
 uglifyjs $TJS --compress 'pure_funcs="F2,F3,F4,F5,F6,F7,F8,F9,A2,A3,A4,A5,A6,A7,A8,A9",pure_getters,keep_fargs=false,unsafe_comps,unsafe' | uglifyjs --mangle --output=$MINTJS
 fi
 fi
 if ${BUILD_DETOKENIZER}; then
-elm.sh make src/detokenizer.elm ${DEBUG} --output=$DJS
+elm make src/detokenizer.elm ${DEBUG} --output=$DJS
 if ${MINIFY}; then
 uglifyjs $DJS --compress 'pure_funcs="F2,F3,F4,F5,F6,F7,F8,F9,A2,A3,A4,A5,A6,A7,A8,A9",pure_getters,keep_fargs=false,unsafe_comps,unsafe' | uglifyjs --mangle --output=$MINDJS
 
